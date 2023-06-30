@@ -1,32 +1,3 @@
-# # Kappa Calibration Example
-# ## Overview
-#=
-In this example, we use the inverse problem to calibrate the von-karman constant, κ in
-the equation: u(z) = u^* / κ log (z / z0), 
-which represents the wind profile in Monin-Obukhov
-Similarity Theory (MOST) formulations. In order to recover the empirically determined κ = 0.4, 
-we use data from the John Hopkins Tubulence Channel Flow, which offers DNS simulations of a channel flow with 
-smooth wall boundary conditions, i.e. z0m ≈ 0 m. The dataset can be found here: https://turbulence.pha.jhu.edu/Channel_Flow.aspx
-We use the dataset's u^* as an observable, and each ensemble member estimates u^* through the
-SurfaceFluxes.jl function surface_conditions, see https://github.com/CliMA/SurfaceFluxes.jl
-In order to calculate u^*, the function surface_conditions is provided a set of thermodynamic params,
-a functional form for stability functions (Businger, Gryanick, Grachev), and the constants corresponding
-to that functional form. In this example, we elect the Businger functions. 
-=#
-
-# ## Prerequisites
-#=
-This example depends on standard Julia packages as well as CliMA packages:
-[EnsembleKalmanProcess.jl](https://github.com/CliMA/EnsembleKalmanProcesses.jl),
-[CLIMAParameters.jl](https://github.com/CliMA/CLIMAParameters.jl),
-[SurfaceFluxes v0.6](https://github.com/CliMA/SurfaceFluxes.jl),
-[Thermodynamics v0.10](https://github.com/CliMA/Thermodynamics.jl)
-Note that this example is only compatible with certain versions of these packages.
-=#
-
-# ## Example
-
-# First, we import relevant modules.
 using LinearAlgebra, Random
 using Distributions, Plots
 using EnsembleKalmanProcesses
@@ -70,15 +41,14 @@ u = data_mean_velocity[:, 3] * u_star_obs
 
 # Next, we define our physical model, where we first define thermodynamic parameters
 # and MOST parameters to pass into the surface_conditions function from SurfaceFluxes.jl.
-# We define the MOST stability functions to be of the Businger type.
 """
     physical_model(inputs, parameters)
 
-Takes in kappa and mean states, producing a ustar (or u(z) profile) ensemble for each horizontal point.
+Takes in Businger params and mean states, producing a ustar (or u(z) profile) ensemble for each horizontal point.
 
 Inputs:
     inputs{Array}(len)          in this case containing u and z
-    parameters{NamedTuple}      in this case κ
+    parameters{NamedTuple}      Businger params
 
 Example:
 
