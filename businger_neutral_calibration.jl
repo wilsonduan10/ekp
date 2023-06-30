@@ -1,3 +1,11 @@
+#=
+ANALYSIS
+
+Because of the neutral conditions, L_MO is always infinity, so ζ = z/L_MO is always 0. 
+In the Businger formulation, ϕ = 1 + a_m * ζ, and since ζ is always zero, ϕ will equal 1
+no matter the a_m. As a result, a_m is not calibrated at all.
+
+=#
 using LinearAlgebra, Random
 using Distributions, Plots
 using EnsembleKalmanProcesses
@@ -39,26 +47,7 @@ u_star_obs = 4.14872e-02
 z = data_mean_velocity[:, 1]
 u = data_mean_velocity[:, 3] * u_star_obs
 
-# Next, we define our physical model, where we first define thermodynamic parameters
-# and MOST parameters to pass into the surface_conditions function from SurfaceFluxes.jl.
-"""
-    physical_model(inputs, parameters)
-
-Takes in Businger params and mean states, producing a ustar (or u(z) profile) ensemble for each horizontal point.
-
-Inputs:
-    inputs{Array}(len)          in this case containing u and z
-    parameters{NamedTuple}      Businger params
-
-Example:
-
-`inputs` are the measured profiles, which would be inputs to `SurfaceFluxes.jl` -> See JH DNS Database.
-EKP requires `parameters` in `Vector` form - `Tuples` are not permitted.
-"""
-function physical_model(parameters, inputs)
-    κ = parameters[1] # this is being updated by the EKP iterator
-    (; u, z) = inputs
-
+function get_surf_flux_params(overrides)
     # First, we set up thermodynamic parameters
     ## This line initializes a toml dict, where we will extract parameters from
     toml_dict = CP.create_toml_dict(FT; dict_type = "alias")
@@ -68,6 +57,11 @@ function physical_model(parameters, inputs)
     ## in this idealized case, we assume dry isothermal conditions
     ts_sfc = TD.PhaseEquil_ρθq(thermo_params, FT(1), FT(300), FT(0))
     ts_in = TD.PhaseEquil_ρθq(thermo_params, FT(1), FT(300), FT(0))
+
+    # initialize κ parameter
+    aliases = ["von_karman_const"]
+    κ_pairs = CP.get_parameter_values!(toml_dict, aliases, "SurfaceFluxesParameters")
+    κ_pairs = (; κ_pairs...)
 
     # Next, we set up SF parameters
     ## An alias for each constant we need
@@ -82,15 +76,25 @@ function physical_model(parameters, inputs)
         ζ_a = sf_pairs.ζ_a_Businger,
         γ = sf_pairs.γ_Businger,
     )
-    ufp = UF.BusingerParams{FT}(; sf_pairs...) # initialize Businger params
+    # override default Businger stability function parameters with model parameters
+    sf_pairs = override_climaatmos_defaults(sf_pairs, overrides)
 
-    κ_nt = (; von_karman_const = κ)
+    ufp = UF.BusingerParams{FT}(; sf_pairs...) # initialize Businger params
 
     # Now, we initialize the variable surf_flux_params, which we will eventually pass into 
     # surface_conditions along with mean wind data
     UFP = typeof(ufp)
     TPtype = typeof(thermo_params)
-    surf_flux_params = SF.Parameters.SurfaceFluxesParameters{FT, UFP, TPtype}(; κ_nt..., ufp, thermo_params)
+    surf_flux_params = SF.Parameters.SurfaceFluxesParameters{FT, UFP, TPtype}(; κ_pairs..., ufp, thermo_params)
+    return (surf_flux_params, ts_sfc, ts_in)
+end
+
+function physical_model(parameters, inputs)
+    a_m, a_h = parameters
+    (; u, z) = inputs
+
+    overrides = (; a_m, a_h)
+    surf_flux_params, ts_sfc, ts_in = get_surf_flux_params(overrides)
 
     # Now, we loop over all the observations and call SF.surface_conditions to estimate u^*
     u_star = zeros(length(u))
@@ -127,21 +131,11 @@ function G(parameters, inputs)
     return [u_star_mean]
 end
 
-# Here, we define the true value of the parameters we wish to recover
-κ = 0.4
-theta_true = [κ]
-u_star_obs = 4.14872e-02
-
-# Define the arguments to be passed into G:
-parameters = (; κ)
+# Define the inputs to be passed into G:
 u = u[1:(end - 1)] # we remove the last line because we want different surface state conditions
 z = z[1:(end - 1)]
 inputs = (; u, z)
 
-# Next, we define y, which is the noisy observation. Because we already have the truth observation,
-# we add noise to the observed u^* and store it in y. Refer to Cleary et al 2021 for more details.
-# We choose a noise scaling constant of 0.0005, which is small because the order of magnitude of 
-# u_* is 10^-2, and we don't want the noise to be greater than our observation.
 Γ = 0.0005 * I
 η_dist = MvNormal(zeros(1), Γ)
 y = [u_star_obs] .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary et al 2021
@@ -150,12 +144,13 @@ y = [u_star_obs] .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary e
 
 # Assume that users have prior knowledge of approximate truth.
 # (e.g. via physical models / subset of obs / physical laws.)
-prior_u1 = constrained_gaussian("κ", 0.35, 0.25, 0, Inf);
-prior = combine_distributions([prior_u1])
+prior_u1 = constrained_gaussian("a_m", 4.7, 3, -Inf, Inf);
+prior_u2 = constrained_gaussian("a_h", 4.7, 3, -Inf, Inf);
+prior = combine_distributions([prior_u1, prior_u2])
 
 # Set up the initial ensembles
-N_ensemble = 10;
-N_iterations = 50;
+N_ensemble = 5;
+N_iterations = 10;
 
 rng_seed = 41
 rng = Random.MersenneTwister(rng_seed)
@@ -173,10 +168,7 @@ for n in 1:N_iterations
     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
 end
 
-# Mean values in final ensemble for the two parameters of interest reflect the "truth" within some degree of 
-# uncertainty that we can quantify from the elements of `final_ensemble`.
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
-mean(final_ensemble[1, :]) # [param, ens_no]
 
 # To visualize the success of the inversion, we plot model with 3 different forms of the truth: 
 # - The absolute truth of u^* given by the dataset
@@ -185,11 +177,11 @@ mean(final_ensemble[1, :]) # [param, ens_no]
 
 # We then compare them to the initial ensemble and the final ensemble.
 zrange = z
-initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
 ENV["GKSwstype"] = "nul"
+theta_true = (0.0, 0.0)
 plot(
     zrange,
-    physical_model(theta_true..., inputs),
+    physical_model(theta_true, inputs),
     c = :black,
     label = "Model Truth",
     legend = :bottomright,
@@ -198,38 +190,40 @@ plot(
 )
 plot!(
     zrange,
-    ones(length(zrange)) .* y,
-    c = :black,
-    label = "y",
+    physical_model((100, 100), inputs),
+    c = :red,
+    label = "Test",
     legend = :bottomright,
     linewidth = 2,
     linestyle = :dot,
 )
-plot!(zrange, ones(length(zrange)) .* u_star_obs, c = :black, label = "Truth u*", legend = :bottomright, linewidth = 2)
-plot!(
-    zrange,
-    [physical_model(get_ϕ(prior, ensemble_kalman_process, 1)[:, i]..., inputs) for i in 1:N_ensemble],
-    c = :red,
-    label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
-)
-plot!(
-    zrange,
-    [physical_model(final_ensemble[:, i]..., inputs) for i in 1:N_ensemble],
-    c = :blue,
-    label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
-)
+# plot!(
+#     zrange,
+#     ones(length(zrange)) .* y,
+#     c = :black,
+#     label = "y",
+#     legend = :bottomright,
+#     linewidth = 2,
+#     linestyle = :dot,
+# )
+# plot!(zrange, ones(length(zrange)) .* u_star_obs, c = :black, label = "Truth u*", legend = :bottomright, linewidth = 2)
+# plot!(
+#     zrange,
+#     [physical_model(initial_ensemble[:, i], inputs) for i in 1:N_ensemble],
+#     c = :red,
+#     label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
+# )
+# plot!(
+#     zrange,
+#     [physical_model(final_ensemble[:, i], inputs) for i in 1:N_ensemble],
+#     c = :blue,
+#     label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
+# )
 xlabel!("Z")
 ylabel!("U^*")
 png("our_plot")
-# ![see plot: ](../assets/kappa_calibration_plot1.png)
 
-# We also plot the constrained κ values across all ensembles before and after the EKI process in a histogram.
-histogram(initial_ensemble[1, :], label = "initial")
-histogram!(final_ensemble[1, :], label = "final")
-xlabel!("κ")
-ylabel!("# of Ensembles")
-png("final_and_initial_ensemble")
-# ![see plot: ](../assets/kappa_calibration_plot2.png)
-
-# Evidently, EKI was highly successful at recovering the von karman constant κ = 0.4. This process will be extended to recover
-# stability function parameters such as a_m, a_h, b_m, b_h, and Pr_0. 
+# Mean values in final ensemble for the two parameters of interest reflect the "truth" within some degree of 
+# uncertainty that we can quantify from the elements of `final_ensemble`.
+println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
+println("Mean a_h:", mean(final_ensemble[2, :]))
