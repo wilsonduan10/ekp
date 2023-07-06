@@ -44,7 +44,7 @@ function get_surf_flux_params(overrides)
 
     ## in this idealized case, we assume dry isothermal conditions
     ts_sfc = TD.PhaseEquil_ρθq(thermo_params, FT(1), FT(300), FT(0)) # 1, 300, 0.0
-    ts_in = TD.PhaseEquil_ρθq(thermo_params, FT(1), FT(300), FT(0))
+    ts_in = TD.PhaseEquil_ρθq(thermo_params, FT(1.4), FT(500), FT(0.7))
 
     # initialize κ parameter
     aliases = ["von_karman_const"]
@@ -167,7 +167,7 @@ ENV["GKSwstype"] = "nul"
 theta_true = (4.7, 4.7)
 plot(
     zrange,
-    physical_model(theta_true, inputs)[timestep],
+    ones(length(zrange)) .* physical_model(theta_true, inputs)[timestep],
     c = :black,
     label = "Model Truth",
     legend = :bottomright,
@@ -186,13 +186,13 @@ plot!(
 plot!(zrange, ones(length(zrange)) .* u_star_data[timestep], c = :black, label = "Truth u*", legend = :bottomright, linewidth = 2)
 plot!(
     zrange,
-    [physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+    [ones(length(zrange)) .* physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
     c = :red,
     label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
 )
 plot!(
     zrange,
-    [physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+    [ones(length(zrange)) .* physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
     c = :blue,
     label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
 )
