@@ -31,6 +31,9 @@ time_data = Array(data.group["timeseries"]["t"]) # (865, )
 z_data = Array(data.group["profiles"]["z"]) # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, ) likely meaned over all z
 u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
+ρ_data = Array(data.group["reference"]["rho0_full"]) # (200, )
+qt_data = Array(data.group["profiles"]["qt_min"]) # (865, 200)
+θ_li_data = Array(data.group["profiles"]["thetali_mean"]) # (865, 200)
 # for i in 1:size(u_data)[1]
 #     u_data[:, i] = u_data[:, i] * u_star_data[i]
 # end
@@ -41,10 +44,6 @@ function get_surf_flux_params(overrides)
     toml_dict = CP.create_toml_dict(FT; dict_type = "alias")
     param_set = create_parameters(toml_dict, UF.BusingerType())
     thermo_params = SFP.thermodynamics_params(param_set)
-
-    ## in this idealized case, we assume dry isothermal conditions
-    ts_sfc = TD.PhaseEquil_ρθq(thermo_params, FT(1), FT(300), FT(0)) # 1, 300, 0.0
-    ts_in = TD.PhaseEquil_ρθq(thermo_params, FT(1.4), FT(500), FT(0.7))
 
     # initialize κ parameter
     aliases = ["von_karman_const"]
@@ -74,7 +73,7 @@ function get_surf_flux_params(overrides)
     UFP = typeof(ufp)
     TPtype = typeof(thermo_params)
     surf_flux_params = SF.Parameters.SurfaceFluxesParameters{FT, UFP, TPtype}(; κ_pairs..., ufp, thermo_params)
-    return (surf_flux_params, ts_sfc, ts_in)
+    return thermo_params, surf_flux_params
 end
 
 function physical_model(parameters, inputs)
@@ -82,18 +81,21 @@ function physical_model(parameters, inputs)
     (; u, z, time) = inputs
 
     overrides = (; a_m, a_h)
-    surf_flux_params, ts_sfc, ts_in = get_surf_flux_params(overrides)
+    thermo_params, surf_flux_params = get_surf_flux_params(overrides)
 
     # Now, we loop over all the observations and call SF.surface_conditions to estimate u^*
     u_star = zeros(length(time)) # (865, )
-    for j in 1:lastindex(time)
+    for j in 1:lastindex(time) # 865
         u_star_sum = 0.0
-        for i in 1:size(u_data)[1]
+        for i in 1:size(u_data)[1] # 200
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             u_sfc = SVector{2, FT}(FT(0), FT(0))
+
+            ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j])
+            ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
 
             state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
@@ -145,22 +147,14 @@ initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble);
 ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
 
 for n in 1:N_iterations
-    ## get_ϕ_final returns the most recently updated constrained parameters, which it used to make the
-    ## next model forward and thus the next update 
     params_i = get_ϕ_final(prior, ensemble_kalman_process)
-    ## calculate the forwarded model values
     G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
 end
 
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
-# To visualize the success of the inversion, we plot model with 3 different forms of the truth: 
-# - The absolute truth of u^* given by the dataset
-# - y, the noisy observation we used to calibrate our model parameter κ
-# - The output of the physical model given the true κ = 0.4
 
-# We then compare them to the initial ensemble and the final ensemble.
 zrange = z_data
 timestep = 1
 ENV["GKSwstype"] = "nul"
