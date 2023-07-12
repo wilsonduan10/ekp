@@ -87,14 +87,14 @@ function physical_model(parameters, inputs)
     u_star = zeros(length(time)) # (865, )
     for j in 1:lastindex(time) # 865
         u_star_sum = 0.0
-        for i in 1:size(u_data)[1] # 200
+        ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
+        for i in 2:size(u_data)[1] # 200, starting at 2 because 1 is surface conditions
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             u_sfc = SVector{2, FT}(FT(0), FT(0))
-
-            ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
+            
             ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
 
             state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
