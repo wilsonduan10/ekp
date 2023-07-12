@@ -32,8 +32,8 @@ z_data = Array(data.group["profiles"]["z"]) # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, ) likely meaned over all z
 u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
 ρ_data = Array(data.group["reference"]["rho0_full"]) # (200, )
-qt_data = Array(data.group["profiles"]["qt_min"]) # (865, 200)
-θ_li_data = Array(data.group["profiles"]["thetali_mean"]) # (865, 200)
+qt_data = Array(data.group["profiles"]["qt_min"]) # (200, 865)
+θ_li_data = Array(data.group["profiles"]["thetali_mean"]) # (200, 865)
 # for i in 1:size(u_data)[1]
 #     u_data[:, i] = u_data[:, i] * u_star_data[i]
 # end
@@ -94,7 +94,7 @@ function physical_model(parameters, inputs)
             u_in = SVector{2, FT}(u_in, v_in)
             u_sfc = SVector{2, FT}(FT(0), FT(0))
 
-            ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j])
+            ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
             ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
 
             state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
