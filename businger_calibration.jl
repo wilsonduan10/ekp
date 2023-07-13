@@ -31,12 +31,23 @@ time_data = Array(data.group["timeseries"]["t"]) # (865, )
 z_data = Array(data.group["profiles"]["z"]) # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, ) likely meaned over all z
 u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
+v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
 ρ_data = Array(data.group["reference"]["rho0_full"]) # (200, )
 qt_data = Array(data.group["profiles"]["qt_min"]) # (200, 865)
 θ_li_data = Array(data.group["profiles"]["thetali_mean"]) # (200, 865)
 # for i in 1:size(u_data)[1]
 #     u_data[:, i] = u_data[:, i] * u_star_data[i]
 # end
+for i in 1:size(u_data)[1]
+    for j in 1:size(u_data)[2]
+        u_data[i, j] = sqrt(u_data[i, j] * u_data[i, j] + v_data[i, j] * v_data[i, j])
+    end
+end
+
+# store unconverged values, potentially discover pattern
+unconverged_data = Dict{Tuple{FT, FT}, Int64}()
+unconverged_z = Dict{FT, Int64}()
+unconverged_t = Dict{FT, Int64}()
 
 function get_surf_flux_params(overrides)
     # First, we set up thermodynamic parameters
@@ -87,8 +98,9 @@ function physical_model(parameters, inputs)
     u_star = zeros(length(time)) # (865, )
     for j in 1:lastindex(time) # 865
         u_star_sum = 0.0
+        total = 0
         ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
-        for i in 2:size(u_data)[1] # 200, starting at 2 because 1 is surface conditions
+        for i in 2:size(u_data)[1] # 200 - 1, starting at 2 because 1 is surface conditions
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i]
@@ -107,10 +119,22 @@ function physical_model(parameters, inputs)
             sc = SF.ValuesOnly{FT}(; kwargs...)
 
             # Now, we call surface_conditions and store the calculated ustar:
-            sf = SF.surface_conditions(surf_flux_params, sc)
-            u_star_sum += sf.ustar
+            try
+                sf = SF.surface_conditions(surf_flux_params, sc)
+                u_star_sum += sf.ustar
+                total += 1;
+            catch
+                z_temp, t_temp = (z_data[i], time_data[j])
+                temp_key = (z_temp, t_temp)
+                @warn "Unconverged surface flux at z=$z_temp and t=$t_temp"
+                haskey(unconverged_data, temp_key) ? unconverged_data[temp_key] += 1 : unconverged_data[temp_key] = 1
+                haskey(unconverged_z, z_temp) ? unconverged_z[z_temp] += 1 : unconverged_z[z_temp] = 1
+                haskey(unconverged_t, t_temp) ? unconverged_t[t_temp] += 1 : unconverged_t[t_temp] = 1
+            end
+            
         end
-        u_star[j] = u_star_sum / length(u)
+        total = max(total, 1) # just in case total is zero, we don't want to divide by 0
+        u_star[j] = u_star_sum / total
     end
     return u_star
 end
@@ -178,18 +202,18 @@ plot!(
     linestyle = :dot,
 )
 plot!(zrange, ones(length(zrange)) .* u_star_data[timestep], c = :black, label = "Truth u*", legend = :bottomright, linewidth = 2)
-plot!(
-    zrange,
-    [ones(length(zrange)) .* physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
-    c = :red,
-    label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
-)
-plot!(
-    zrange,
-    [ones(length(zrange)) .* physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
-    c = :blue,
-    label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
-)
+# plot!(
+#     zrange,
+#     [ones(length(zrange)) .* physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+#     c = :red,
+#     label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
+# )
+# plot!(
+#     zrange,
+#     [ones(length(zrange)) .* physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+#     c = :blue,
+#     label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
+# )
 xlabel!("Z")
 ylabel!("U^*")
 png("our_plot")
@@ -198,3 +222,7 @@ png("our_plot")
 # uncertainty that we can quantify from the elements of `final_ensemble`.
 println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(final_ensemble[2, :]))
+
+println("Unconverged data points: ", unconverged_data)
+println("Unconverged z: ", unconverged_z)
+println("Unconverged t: ", unconverged_t)
