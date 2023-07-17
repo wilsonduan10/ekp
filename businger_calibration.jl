@@ -24,8 +24,7 @@ localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
 data = NCDataset(localfile);
 
 # Construct observables
-# try different observables - ustar, L_MO, flux (momentum, heat, buoyancy)
-# instead of using u, use √u^2 + v^2
+# try different observables - ustar, L_MO, flux (momentum, heat, buoyancy), or phi
 # first try ustar
 time_data = Array(data.group["timeseries"]["t"]) # (865, )
 z_data = Array(data.group["profiles"]["z"]) # (200, )
@@ -35,9 +34,13 @@ v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
 ρ_data = Array(data.group["reference"]["rho0_full"]) # (200, )
 qt_data = Array(data.group["profiles"]["qt_min"]) # (200, 865)
 θ_li_data = Array(data.group["profiles"]["thetali_mean"]) # (200, 865)
+lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
+shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 # for i in 1:size(u_data)[1]
 #     u_data[:, i] = u_data[:, i] * u_star_data[i]
 # end
+
+# use √u^2 + v^2
 for i in 1:size(u_data)[1]
     for j in 1:size(u_data)[2]
         u_data[i, j] = sqrt(u_data[i, j] * u_data[i, j] + v_data[i, j] * v_data[i, j])
@@ -89,7 +92,7 @@ end
 
 function physical_model(parameters, inputs)
     a_m, a_h = parameters
-    (; u, z, time) = inputs
+    (; u, z, time, lhf, shf) = inputs
 
     overrides = (; a_m, a_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides)
@@ -113,10 +116,10 @@ function physical_model(parameters, inputs)
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions
-            z0m = z0b = FT(0.0001)
-            gustiness = FT(0)
-            kwargs = (; state_in, state_sfc, z0m, z0b, gustiness)
-            sc = SF.ValuesOnly{FT}(; kwargs...)
+            z0m = z0b = FT(0.001)
+            gustiness = FT(1)
+            kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
+            sc = SF.Fluxes{FT}(; kwargs...)
 
             # Now, we call surface_conditions and store the calculated ustar:
             try
@@ -147,7 +150,7 @@ function G(parameters, inputs)
     return u_star
 end
 
-inputs = (u = u_data, z = z_data, time = time_data)
+inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data)
 
 Γ = 0.0005 * I
 η_dist = MvNormal(zeros(length(u_star_data)), Γ)
@@ -155,8 +158,8 @@ y = u_star_data .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary et
 
 # Assume that users have prior knowledge of approximate truth.
 # (e.g. via physical models / subset of obs / physical laws.)
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, -Inf, Inf);
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, -Inf, Inf);
+prior_u1 = constrained_gaussian("a_m", 4.0, 3, -Inf, Inf);
+prior_u2 = constrained_gaussian("a_h", 4.0, 3, -Inf, Inf);
 prior = combine_distributions([prior_u1, prior_u2])
 
 # Set up the initial ensembles
@@ -180,9 +183,10 @@ final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
 
 zrange = z_data
-timestep = 1
+timestep = 5
 ENV["GKSwstype"] = "nul"
 theta_true = (4.7, 4.7)
+theta_bad = (100.0, 100.0)
 plot(
     zrange,
     ones(length(zrange)) .* physical_model(theta_true, inputs)[timestep],
@@ -192,6 +196,15 @@ plot(
     linewidth = 2,
     linestyle = :dash,
 )
+# plot!(
+#     zrange,
+#     ones(length(zrange)) .* physical_model(theta_bad, inputs)[timestep],
+#     c = :blue,
+#     label = "Model False",
+#     legend = :bottomright,
+#     linewidth = 2,
+#     linestyle = :dot,
+# )
 plot!(
     zrange,
     ones(length(zrange)) .* y[timestep],
@@ -202,18 +215,18 @@ plot!(
     linestyle = :dot,
 )
 plot!(zrange, ones(length(zrange)) .* u_star_data[timestep], c = :black, label = "Truth u*", legend = :bottomright, linewidth = 2)
-# plot!(
-#     zrange,
-#     [ones(length(zrange)) .* physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
-#     c = :red,
-#     label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
-# )
-# plot!(
-#     zrange,
-#     [ones(length(zrange)) .* physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
-#     c = :blue,
-#     label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
-# )
+plot!(
+    zrange,
+    [ones(length(zrange)) .* physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+    c = :red,
+    label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
+)
+plot!(
+    zrange,
+    [ones(length(zrange)) .* physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+    c = :blue,
+    label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
+)
 xlabel!("Z")
 ylabel!("U^*")
 png("our_plot")
