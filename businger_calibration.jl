@@ -90,6 +90,10 @@ function get_surf_flux_params(overrides)
     return thermo_params, surf_flux_params
 end
 
+stable = 0
+unstable = 0
+neutral = 0
+
 function physical_model(parameters, inputs)
     a_m, a_h = parameters
     (; u, z, time, lhf, shf) = inputs
@@ -124,11 +128,14 @@ function physical_model(parameters, inputs)
             # Now, we call surface_conditions and store the calculated ustar:
             try
                 sf = SF.surface_conditions(surf_flux_params, sc)
+                global stable, unstable, neutral
+                sf.L_MO > 0 ? stable += 1 : (sf.L_MO < 0 ? unstable += 1 : neutral += 1)
                 u_star_sum += sf.ustar
                 total += 1;
-            catch
+            catch e
                 z_temp, t_temp = (z_data[i], time_data[j])
                 temp_key = (z_temp, t_temp)
+                println(e)
                 @warn "Unconverged surface flux at z=$z_temp and t=$t_temp"
                 haskey(unconverged_data, temp_key) ? unconverged_data[temp_key] += 1 : unconverged_data[temp_key] = 1
                 haskey(unconverged_z, z_temp) ? unconverged_z[z_temp] += 1 : unconverged_z[z_temp] = 1
@@ -196,15 +203,15 @@ plot(
     linewidth = 2,
     linestyle = :dash,
 )
-# plot!(
-#     zrange,
-#     ones(length(zrange)) .* physical_model(theta_bad, inputs)[timestep],
-#     c = :blue,
-#     label = "Model False",
-#     legend = :bottomright,
-#     linewidth = 2,
-#     linestyle = :dot,
-# )
+plot!(
+    zrange,
+    ones(length(zrange)) .* physical_model(theta_bad, inputs)[timestep],
+    c = :blue,
+    label = "Model False",
+    legend = :bottomright,
+    linewidth = 2,
+    linestyle = :dot,
+)
 plot!(
     zrange,
     ones(length(zrange)) .* y[timestep],
@@ -239,3 +246,12 @@ println("Mean a_h:", mean(final_ensemble[2, :]))
 println("Unconverged data points: ", unconverged_data)
 println("Unconverged z: ", unconverged_z)
 println("Unconverged t: ", unconverged_t)
+
+println("Stable count: ", stable)
+println("Unstable count: ", unstable)
+println("Neutral count: ", neutral)
+
+a = physical_model(theta_true, inputs)
+b = physical_model(theta_bad, inputs)
+println(mean(a))
+println(mean(b))
