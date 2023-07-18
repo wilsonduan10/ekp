@@ -119,7 +119,7 @@ function create_parameters(toml_dict, ufpt)
 
     aliases = ["von_karman_const"]
     pairs = CP.get_parameter_values!(toml_dict, aliases, "SurfaceFluxesParameters")
-    override = return SFP.SurfaceFluxesParameters{FT, AUFP, TP}(; pairs..., ufp, thermo_params)
+    return SFP.SurfaceFluxesParameters{FT, AUFP, TP}(; pairs..., ufp, thermo_params)
 end
 
 function override_climaatmos_defaults(defaults::NamedTuple, overrides::NamedTuple)

@@ -21,7 +21,7 @@ include("setup_parameter_set.jl")
 
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
 localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
-data = NCDataset(localfile);
+data = NCDataset(localfile)
 
 # Construct observables
 # try different observables - ustar, L_MO, flux (momentum, heat, buoyancy), or phi
@@ -177,6 +177,8 @@ rng_seed = 41
 rng = Random.MersenneTwister(rng_seed)
 initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble);
 
+println("Initial ensemble: ", initial_ensemble)
+
 # Define EKP and run iterative solver for defined number of iterations
 ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
 
@@ -187,6 +189,7 @@ for n in 1:N_iterations
 end
 
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
+println("Final ensemble: ", final_ensemble)
 
 
 zrange = z_data
@@ -203,15 +206,15 @@ plot(
     linewidth = 2,
     linestyle = :dash,
 )
-plot!(
-    zrange,
-    ones(length(zrange)) .* physical_model(theta_bad, inputs)[timestep],
-    c = :blue,
-    label = "Model False",
-    legend = :bottomright,
-    linewidth = 2,
-    linestyle = :dot,
-)
+# plot!(
+#     zrange,
+#     ones(length(zrange)) .* physical_model(theta_bad, inputs)[timestep],
+#     c = :blue,
+#     label = "Model False",
+#     legend = :bottomright,
+#     linewidth = 2,
+#     linestyle = :dot,
+# )
 plot!(
     zrange,
     ones(length(zrange)) .* y[timestep],
