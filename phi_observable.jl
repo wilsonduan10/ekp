@@ -38,13 +38,14 @@ lmo_data = Array(data.group["timeseries"]["obukhov_length_mean"]) # (865, )
 # uw_data = Array(data.group["profiles"]["u_sgs_flux_z"]) # (200, 865)
 # vw_data = Array(data.group["profiles"]["v_sgs_flux_z"]) # (200, 865)
 
+Z, T = size(u_data) # dimension variables
+
 # use √u^2 + v^2
 for i in 1:Z
     u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
 end
 
 ## derive data
-Z, T = size(u_data) # dimension variables
 # construct u', w'
 u_mean = [mean(u_data[i, :]) for i in 1:Z] # (200, )
 w_mean = [mean(w_data[i, :]) for i in 1:Z] # (200, )
@@ -122,18 +123,101 @@ function get_surf_flux_params(overrides)
 end
 
 function model(parameters, inputs)
+    global Z, T
     a_m, a_h = parameters
     (; z, L_MO) = inputs
+    L_MO_avg = mean(L_MO)
 
     overrides = (; a_m, a_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides)
 
     uft = UF.BusingerType()
-    tt = UF.MomentumTransport()
-    l_mo = 123
-    uf = UF.universal_func(uft, l_mo, SFP.uf_params(surf_flux_params))
+    transport = UF.MomentumTransport()
+
+    predicted_phi = zeros(Z)
+    for i in 1:Z
+        uf = UF.universal_func(uft, L_MO_avg, SFP.uf_params(surf_flux_params))
+        ζ = z[i] / L_MO_avg
+        predicted_phi[i] = UF.phi(uf, ζ, transport)
+    end
+
+    return predicted_phi
 end
 
 function G(parameters, inputs)
-
+    return model(parameters, inputs)
 end
+
+Γ = 0.005 * I # assume this is the amount of noise in observations y
+inputs = (; z = z_data, L_MO = lmo_data)
+
+prior_u1 = constrained_gaussian("a_m", 4.0, 3, -Inf, Inf);
+prior_u2 = constrained_gaussian("a_h", 4.0, 3, -Inf, Inf);
+prior = combine_distributions([prior_u1, prior_u2])
+
+# Set up the initial ensembles
+N_ensemble = 5;
+N_iterations = 5;
+
+rng_seed = 41
+rng = Random.MersenneTwister(rng_seed)
+initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble);
+
+# Define EKP and run iterative solver for defined number of iterations
+ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
+
+for n in 1:N_iterations
+    params_i = get_ϕ_final(prior, ensemble_kalman_process)
+    G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
+    EKP.update_ensemble!(ensemble_kalman_process, G_ens)
+end
+
+final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
+
+ENV["GKSwstype"] = "nul"
+theta_true = (4.7, 4.7)
+theta_bad = (100.0, 100.0)
+ζ_range = z_data / mean(lmo_data)
+plot(
+    ζ_range,
+    model(theta_true, inputs),
+    c = :black,
+    label = "Model Truth",
+    legend = :bottomright,
+    linewidth = 2,
+    linestyle = :dash,
+)
+plot!(
+    ζ_range,
+    model(theta_bad, inputs),
+    c = :blue,
+    label = "Model False",
+    legend = :bottomright,
+    linewidth = 2,
+    linestyle = :dot,
+)
+# plot!(
+#     zrange,
+#     ones(length(zrange)) .* y[timestep],
+#     c = :black,
+#     label = "y",
+#     legend = :bottomright,
+#     linewidth = 2,
+#     linestyle = :dot,
+# )
+# plot!(zrange, ones(length(zrange)) .* u_star_data[timestep], c = :black, label = "Truth u*", legend = :bottomright, linewidth = 2)
+# plot!(
+#     zrange,
+#     [ones(length(zrange)) .* physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+#     c = :red,
+#     label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
+# )
+# plot!(
+#     zrange,
+#     [ones(length(zrange)) .* physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+#     c = :blue,
+#     label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
+# )
+xlabel!("ζ")
+ylabel!("ϕ(ζ)")
+png("our_plot")
