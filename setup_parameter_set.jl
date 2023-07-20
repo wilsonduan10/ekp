@@ -1,40 +1,3 @@
-# sets up parameters
-# const sf_params = SF.Parameters.SurfaceFluxesParameters{
-#     FT,
-#     SF.UniversalFunctions.BusingerParams{FT},
-#     TP.ThermodynamicsParameters{FT},
-# }(
-#     0.4f0,
-#     SF.UniversalFunctions.BusingerParams{FT}(0.74f0, 4.7f0, 4.7f0, 2.5f0, 4.45f0),
-#     TP.ThermodynamicsParameters{FT}(
-#         273.16f0,
-#         100000.0f0,
-#         1859.0f0,
-#         4181.0f0,
-#         2100.0f0,
-#         2.5008f6,
-#         2.8344f6,
-#         611.657f0,
-#         273.16f0,
-#         273.15f0,
-#         150.0f0,
-#         1000.0f0,
-#         298.15f0,
-#         6864.8f0,
-#         10513.6f0,
-#         0.2857143f0,
-#         8.31446f0,
-#         0.02897f0,
-#         0.01801528f0,
-#         290.0f0,
-#         220.0f0,
-#         9.80616f0,
-#         233.0f0,
-#         1.0f0,
-#     ),
-# )
-
-
 import CLIMAParameters as CP
 import SurfaceFluxes as SF
 import SurfaceFluxes.UniversalFunctions as UF
@@ -62,7 +25,8 @@ end
 
 function create_uf_parameters(toml_dict, ::UF.BusingerType)
     FT = CP.float_type(toml_dict)
-    aliases = ["Pr_0_Businger", "a_m_Businger", "a_h_Businger", "ζ_a_Businger", "γ_Businger"]
+    aliases =
+        ["Pr_0_Businger", "a_m_Businger", "a_h_Businger", "b_m_Businger", "b_h_Businger", "ζ_a_Businger", "γ_Businger"]
 
     pairs = CP.get_parameter_values!(toml_dict, aliases, "UniversalFunctions")
     pairs = (; pairs...) # convert to NamedTuple
@@ -71,6 +35,8 @@ function create_uf_parameters(toml_dict, ::UF.BusingerType)
         Pr_0 = pairs.Pr_0_Businger,
         a_m = pairs.a_m_Businger,
         a_h = pairs.a_h_Businger,
+        b_m = pairs.b_m_Businger,
+        b_h = pairs.b_h_Businger,
         ζ_a = pairs.ζ_a_Businger,
         γ = pairs.γ_Businger,
     )
