@@ -91,7 +91,9 @@ version = "0.1.2"
 
 [[deps.CLIMAParameters]]
 deps = ["DocStringExtensions", "TOML", "Test"]
-git-tree-sha1 = "119ef280867dde6b8a3f351b36b1f5748db12faf"
+git-tree-sha1 = "77f2bc48d0d957e4858b521fc17198993830d665"
+repo-rev = "wd/businger-unstable-params"
+repo-url = "https://github.com/CliMA/CLIMAParameters.jl.git"
 uuid = "6eacf6c3-8458-43b9-ae03-caf5306d3d53"
 version = "0.7.5"
 
@@ -1046,8 +1048,8 @@ uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 
 [[deps.SurfaceFluxes]]
 deps = ["DocStringExtensions", "KernelAbstractions", "RootSolvers", "StaticArrays", "Thermodynamics"]
-git-tree-sha1 = "c58f0ce9c642afead93884d6d411eab3f93bfb66"
-repo-rev = "wd/test-businger-calibration"
+git-tree-sha1 = "57c81ba00887b87ffed599ee247f2c56803bb41a"
+repo-rev = "wd/businger-unstable-params"
 repo-url = "https://github.com/CliMA/SurfaceFluxes.jl.git"
 uuid = "49b00bb7-8bd4-4f2b-b78c-51cd0450215f"
 version = "0.6.3"
