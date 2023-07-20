@@ -11,6 +11,9 @@ using CLIMAParameters
 const CP = CLIMAParameters
 FT = Float64
 
+import RootSolvers
+const RS = RootSolvers
+
 import SurfaceFluxes as SF
 import Thermodynamics as TD
 import Thermodynamics.Parameters as TP
@@ -66,7 +69,7 @@ function get_surf_flux_params(overrides)
 
     # Next, we set up SF parameters
     ## An alias for each constant we need
-    aliases = ["Pr_0_Businger", "a_m_Businger", "a_h_Businger", "ζ_a_Businger", "γ_Businger"]
+    aliases = ["Pr_0_Businger", "a_m_Businger", "a_h_Businger", "b_m_Businger", "b_h_Businger", "ζ_a_Businger", "γ_Businger"]
     sf_pairs = CP.get_parameter_values!(toml_dict, aliases, "UniversalFunctions")
     sf_pairs = (; sf_pairs...) # convert parameter pairs to NamedTuple
     ## change the keys from their alias to more concise keys
@@ -74,6 +77,8 @@ function get_surf_flux_params(overrides)
         Pr_0 = sf_pairs.Pr_0_Businger,
         a_m = sf_pairs.a_m_Businger,
         a_h = sf_pairs.a_h_Businger,
+        b_m = sf_pairs.b_m_Businger,
+        b_h = sf_pairs.b_h_Businger,
         ζ_a = sf_pairs.ζ_a_Businger,
         γ = sf_pairs.γ_Businger,
     )
@@ -95,10 +100,10 @@ unstable = 0
 neutral = 0
 
 function physical_model(parameters, inputs)
-    a_m, a_h = parameters
+    a_m, a_h, b_m, b_h = parameters
     (; u, z, time, lhf, shf) = inputs
 
-    overrides = (; a_m, a_h)
+    overrides = (; a_m, a_h, b_m, b_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides)
 
     # Now, we loop over all the observations and call SF.surface_conditions to estimate u^*
@@ -107,7 +112,7 @@ function physical_model(parameters, inputs)
         u_star_sum = 0.0
         total = 0
         ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
-        for i in 2:size(u_data)[1] # 200 - 1, starting at 2 because 1 is surface conditions
+        for i in 2:4 # 200 - 1, starting at 2 because 1 is surface conditions
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i]
@@ -127,7 +132,7 @@ function physical_model(parameters, inputs)
 
             # Now, we call surface_conditions and store the calculated ustar:
             try
-                sf = SF.surface_conditions(surf_flux_params, sc)
+                sf = SF.surface_conditions(surf_flux_params, sc, soltype=RS.VerboseSolution())
                 global stable, unstable, neutral
                 sf.L_MO > 0 ? stable += 1 : (sf.L_MO < 0 ? unstable += 1 : neutral += 1)
                 u_star_sum += sf.ustar
@@ -167,7 +172,9 @@ y = u_star_data .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary et
 # (e.g. via physical models / subset of obs / physical laws.)
 prior_u1 = constrained_gaussian("a_m", 4.0, 3, -Inf, Inf);
 prior_u2 = constrained_gaussian("a_h", 4.0, 3, -Inf, Inf);
-prior = combine_distributions([prior_u1, prior_u2])
+prior_u3 = constrained_gaussian("b_m", 15.0, 5, 0, Inf);
+prior_u4 = constrained_gaussian("b_h", 9.0, 4, 0, Inf);
+prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
 # Set up the initial ensembles
 N_ensemble = 5;
@@ -195,8 +202,8 @@ println("Final ensemble: ", final_ensemble)
 zrange = z_data
 timestep = 5
 ENV["GKSwstype"] = "nul"
-theta_true = (4.7, 4.7)
-theta_bad = (100.0, 100.0)
+theta_true = (4.7, 4.7, 15.0, 9.0)
+theta_bad = (100.0, 100.0, 100.0, 100.0)
 plot(
     zrange,
     ones(length(zrange)) .* physical_model(theta_true, inputs)[timestep],
@@ -206,55 +213,60 @@ plot(
     linewidth = 2,
     linestyle = :dash,
 )
-# plot!(
-#     zrange,
-#     ones(length(zrange)) .* physical_model(theta_bad, inputs)[timestep],
-#     c = :blue,
-#     label = "Model False",
-#     legend = :bottomright,
-#     linewidth = 2,
-#     linestyle = :dot,
-# )
 plot!(
     zrange,
-    ones(length(zrange)) .* y[timestep],
-    c = :black,
-    label = "y",
+    ones(length(zrange)) .* physical_model(theta_bad, inputs)[timestep],
+    c = :blue,
+    label = "Model False",
     legend = :bottomright,
     linewidth = 2,
     linestyle = :dot,
 )
-plot!(zrange, ones(length(zrange)) .* u_star_data[timestep], c = :black, label = "Truth u*", legend = :bottomright, linewidth = 2)
-plot!(
-    zrange,
-    [ones(length(zrange)) .* physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
-    c = :red,
-    label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
-)
-plot!(
-    zrange,
-    [ones(length(zrange)) .* physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
-    c = :blue,
-    label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
-)
+# plot!(
+#     zrange,
+#     ones(length(zrange)) .* y[timestep],
+#     c = :black,
+#     label = "y",
+#     legend = :bottomright,
+#     linewidth = 2,
+#     linestyle = :dot,
+# )
+# plot!(zrange, ones(length(zrange)) .* u_star_data[timestep], c = :black, label = "Truth u*", legend = :bottomright, linewidth = 2)
+# plot!(
+#     zrange,
+#     [ones(length(zrange)) .* physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+#     c = :red,
+#     label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
+# )
+# plot!(
+#     zrange,
+#     [ones(length(zrange)) .* physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+#     c = :blue,
+#     label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
+# )
 xlabel!("Z")
 ylabel!("U^*")
 png("our_plot")
+
+println("Mean a_m:", mean(initial_ensemble[1, :])) # [param, ens_no]
+println("Mean a_h:", mean(initial_ensemble[2, :]))
+println("Mean b_m:", mean(initial_ensemble[3, :]))
+println("Mean b_h:", mean(initial_ensemble[4, :]))
+println()
 
 # Mean values in final ensemble for the two parameters of interest reflect the "truth" within some degree of 
 # uncertainty that we can quantify from the elements of `final_ensemble`.
 println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(final_ensemble[2, :]))
+println("Mean b_m:", mean(final_ensemble[3, :]))
+println("Mean b_h:", mean(final_ensemble[4, :]))
+println()
 
 println("Unconverged data points: ", unconverged_data)
 println("Unconverged z: ", unconverged_z)
 println("Unconverged t: ", unconverged_t)
+println()
 
 println("Stable count: ", stable)
 println("Unstable count: ", unstable)
 println("Neutral count: ", neutral)
-
-a = physical_model(theta_true, inputs)
-b = physical_model(theta_bad, inputs)
-println(mean(a))
-println(mean(b))
