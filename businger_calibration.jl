@@ -112,7 +112,7 @@ function physical_model(parameters, inputs)
         u_star_sum = 0.0
         total = 0
         ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
-        for i in 2:4 # 200 - 1, starting at 2 because 1 is surface conditions
+        for i in 2:length(z) # 200 - 1, starting at 2 because 1 is surface conditions
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i]
@@ -177,14 +177,12 @@ prior_u4 = constrained_gaussian("b_h", 9.0, 4, 0, Inf);
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
 # Set up the initial ensembles
-N_ensemble = 5;
-N_iterations = 5;
+N_ensemble = 10;
+N_iterations = 10;
 
 rng_seed = 41
 rng = Random.MersenneTwister(rng_seed)
 initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble);
-
-println("Initial ensemble: ", initial_ensemble)
 
 # Define EKP and run iterative solver for defined number of iterations
 ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
@@ -196,8 +194,6 @@ for n in 1:N_iterations
 end
 
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
-println("Final ensemble: ", final_ensemble)
-
 
 zrange = z_data
 timestep = 5
@@ -213,40 +209,41 @@ plot(
     linewidth = 2,
     linestyle = :dash,
 )
-plot!(
-    zrange,
-    ones(length(zrange)) .* physical_model(theta_bad, inputs)[timestep],
-    c = :blue,
-    label = "Model False",
-    legend = :bottomright,
-    linewidth = 2,
-    linestyle = :dot,
-)
 # plot!(
 #     zrange,
-#     ones(length(zrange)) .* y[timestep],
-#     c = :black,
-#     label = "y",
+#     ones(length(zrange)) .* physical_model(theta_bad, inputs)[timestep],
+#     c = :blue,
+#     label = "Model False",
 #     legend = :bottomright,
 #     linewidth = 2,
 #     linestyle = :dot,
 # )
-# plot!(zrange, ones(length(zrange)) .* u_star_data[timestep], c = :black, label = "Truth u*", legend = :bottomright, linewidth = 2)
-# plot!(
-#     zrange,
-#     [ones(length(zrange)) .* physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
-#     c = :red,
-#     label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
-# )
-# plot!(
-#     zrange,
-#     [ones(length(zrange)) .* physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
-#     c = :blue,
-#     label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
-# )
+plot!(
+    zrange,
+    ones(length(zrange)) .* y[timestep],
+    c = :black,
+    label = "y",
+    legend = :bottomright,
+    linewidth = 2,
+    linestyle = :dot,
+)
+plot!(zrange, ones(length(zrange)) .* u_star_data[timestep], c = :black, label = "Truth u*", legend = :bottomright, linewidth = 2)
+plot!(
+    zrange,
+    [ones(length(zrange)) .* physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+    c = :red,
+    label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
+)
+plot!(
+    zrange,
+    [ones(length(zrange)) .* physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+    c = :blue,
+    label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
+)
 xlabel!("Z")
 ylabel!("U^*")
 png("our_plot")
+
 
 println("Mean a_m:", mean(initial_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(initial_ensemble[2, :]))
