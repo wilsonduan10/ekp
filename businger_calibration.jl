@@ -141,7 +141,6 @@ function physical_model(parameters, inputs)
                 z_temp, t_temp = (z_data[i], time_data[j])
                 temp_key = (z_temp, t_temp)
                 println(e)
-                @warn "Unconverged surface flux at z=$z_temp and t=$t_temp"
                 haskey(unconverged_data, temp_key) ? unconverged_data[temp_key] += 1 : unconverged_data[temp_key] = 1
                 haskey(unconverged_z, z_temp) ? unconverged_z[z_temp] += 1 : unconverged_z[z_temp] = 1
                 haskey(unconverged_t, t_temp) ? unconverged_t[t_temp] += 1 : unconverged_t[t_temp] = 1
@@ -177,7 +176,7 @@ prior_u4 = constrained_gaussian("b_h", 9.0, 4, 0, Inf);
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
 # Set up the initial ensembles
-N_ensemble = 10;
+N_ensemble = 5;
 N_iterations = 10;
 
 rng_seed = 41
@@ -195,55 +194,104 @@ end
 
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
-zrange = z_data
-timestep = 5
+
 ENV["GKSwstype"] = "nul"
+
+# plot good model vs bad model
 theta_true = (4.7, 4.7, 15.0, 9.0)
 theta_bad = (100.0, 100.0, 100.0, 100.0)
 plot(
-    zrange,
-    ones(length(zrange)) .* physical_model(theta_true, inputs)[timestep],
+    time_data,
+    physical_model(theta_true, inputs),
     c = :black,
     label = "Model Truth",
     legend = :bottomright,
-    linewidth = 2,
-    linestyle = :dash,
+    ms = 1.5,
+    seriestype=:scatter
 )
-# plot!(
-#     zrange,
-#     ones(length(zrange)) .* physical_model(theta_bad, inputs)[timestep],
-#     c = :blue,
-#     label = "Model False",
-#     legend = :bottomright,
-#     linewidth = 2,
-#     linestyle = :dot,
-# )
 plot!(
-    zrange,
-    ones(length(zrange)) .* y[timestep],
-    c = :black,
+    time_data,
+    physical_model(theta_bad, inputs),
+    c = :red,
+    label = "Model Bad",
+    legend = :bottomright,
+    ms = 1.5,
+    seriestype=:scatter
+)
+xlabel!("T")
+ylabel!("U^*")
+png("good_bad_model")
+
+# plot y vs u_star data
+plot(
+    time_data,
+    y,
+    c = :green,
     label = "y",
     legend = :bottomright,
-    linewidth = 2,
-    linestyle = :dot,
+    ms = 1.5,
+    seriestype=:scatter,
 )
-plot!(zrange, ones(length(zrange)) .* u_star_data[timestep], c = :black, label = "Truth u*", legend = :bottomright, linewidth = 2)
+plot!(time_data, u_star_data, c = :red, label = "Truth u*", ms = 1.5, seriestype=:scatter)
+png("y vs ustar")
+
+# plot good model and y
+plot(
+    time_data,
+    physical_model(theta_true, inputs),
+    c = :black,
+    label = "Model Truth",
+    legend = :bottomright,
+    ms = 1.5,
+    seriestype=:scatter
+)
 plot!(
-    zrange,
-    [ones(length(zrange)) .* physical_model(initial_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+    time_data,
+    y,
+    c = :green,
+    label = "y",
+    legend = :bottomright,
+    ms = 1.5,
+    seriestype=:scatter,
+)
+xlabel!("T")
+ylabel!("U^*")
+png("good model and y")
+
+# plot y, good model, and ensembles
+plot(
+    time_data,
+    y,
+    c = :green,
+    label = "y",
+    legend = :bottomright,
+    ms = 1.5,
+    seriestype=:scatter,
+)
+plot!(
+    time_data,
+    physical_model(theta_true, inputs),
+    c = :black,
+    label = "Model Truth",
+    legend = :bottomright,
+    ms = 1.5,
+    seriestype=:scatter
+)
+plot!(
+    time_data,
+    [physical_model(initial_ensemble[:, i], inputs) for i in 1:N_ensemble],
     c = :red,
     label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
 )
 plot!(
-    zrange,
-    [ones(length(zrange)) .* physical_model(final_ensemble[:, i], inputs)[timestep] for i in 1:N_ensemble],
+    time_data,
+    [physical_model(final_ensemble[:, i], inputs) for i in 1:N_ensemble],
     c = :blue,
     label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
 )
-xlabel!("Z")
+xlabel!("T")
 ylabel!("U^*")
 png("our_plot")
-
 
 println("Mean a_m:", mean(initial_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(initial_ensemble[2, :]))
