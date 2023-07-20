@@ -131,7 +131,7 @@ function physical_model(parameters, inputs)
                 global stable, unstable, neutral
                 sf.L_MO > 0 ? stable += 1 : (sf.L_MO < 0 ? unstable += 1 : neutral += 1)
                 u_star_sum += sf.ustar
-                total += 1;
+                total += 1
             catch e
                 z_temp, t_temp = (z_data[i], time_data[j])
                 temp_key = (z_temp, t_temp)
