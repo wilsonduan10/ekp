@@ -27,8 +27,6 @@ localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
 data = NCDataset(localfile)
 
 # Construct observables
-# try different observables - ustar, L_MO, flux (momentum, heat, buoyancy), or phi
-# first try ustar
 time_data = Array(data.group["timeseries"]["t"]) # (865, )
 z_data = Array(data.group["profiles"]["z"]) # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, ) likely meaned over all z
@@ -51,6 +49,46 @@ end
 unconverged_data = Dict{Tuple{FT, FT}, Int64}()
 unconverged_z = Dict{FT, Int64}()
 unconverged_t = Dict{FT, Int64}()
+
+function get_surf_flux_params(overrides)
+    # First, we set up thermodynamic parameters
+    ## This line initializes a toml dict, where we will extract parameters from
+    toml_dict = CP.create_toml_dict(FT; dict_type = "alias")
+    param_set = create_parameters(toml_dict, UF.BusingerType())
+    thermo_params = SFP.thermodynamics_params(param_set)
+
+    # initialize κ parameter
+    aliases = ["von_karman_const"]
+    κ_pairs = CP.get_parameter_values!(toml_dict, aliases, "SurfaceFluxesParameters")
+    κ_pairs = (; κ_pairs...)
+
+    # Next, we set up SF parameters
+    ## An alias for each constant we need
+    aliases = ["Pr_0_Businger", "a_m_Businger", "a_h_Businger", "b_m_Businger", "b_h_Businger", "ζ_a_Businger", "γ_Businger"]
+    sf_pairs = CP.get_parameter_values!(toml_dict, aliases, "UniversalFunctions")
+    sf_pairs = (; sf_pairs...) # convert parameter pairs to NamedTuple
+    ## change the keys from their alias to more concise keys
+    sf_pairs = (;
+        Pr_0 = sf_pairs.Pr_0_Businger,
+        a_m = sf_pairs.a_m_Businger,
+        a_h = sf_pairs.a_h_Businger,
+        b_m = sf_pairs.b_m_Businger,
+        b_h = sf_pairs.b_h_Businger,
+        ζ_a = sf_pairs.ζ_a_Businger,
+        γ = sf_pairs.γ_Businger,
+    )
+    # override default Businger stability function parameters with model parameters
+    sf_pairs = override_climaatmos_defaults(sf_pairs, overrides)
+
+    ufp = UF.BusingerParams{FT}(; sf_pairs...) # initialize Businger params
+
+    # Now, we initialize the variable surf_flux_params, which we will eventually pass into 
+    # surface_conditions along with mean wind data
+    UFP = typeof(ufp)
+    TPtype = typeof(thermo_params)
+    surf_flux_params = SF.Parameters.SurfaceFluxesParameters{FT, UFP, TPtype}(; κ_pairs..., ufp, thermo_params)
+    return thermo_params, surf_flux_params
+end
 
 stable = 0
 unstable = 0
@@ -82,7 +120,7 @@ function physical_model(parameters, inputs)
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions
-            z0m = z0b = FT(0.0001)
+            z0m = z0b = FT(0.001)
             gustiness = FT(1)
             kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
             sc = SF.Fluxes{FT}(; kwargs...)
@@ -126,152 +164,34 @@ y = u_star_data .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary et
 
 # Assume that users have prior knowledge of approximate truth.
 # (e.g. via physical models / subset of obs / physical laws.)
-prior_u1 = constrained_gaussian("a_m", 4.0, 4, 0, Inf);
-prior_u2 = constrained_gaussian("a_h", 4.0, 4, 0, Inf);
-prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf);
-prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf);
+prior_u1 = constrained_gaussian("a_m", 4.0, 3, -Inf, Inf);
+prior_u2 = constrained_gaussian("a_h", 4.0, 3, -Inf, Inf);
+prior_u3 = constrained_gaussian("b_m", 15.0, 5, 0, Inf);
+prior_u4 = constrained_gaussian("b_h", 9.0, 4, 0, Inf);
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
 # Set up the initial ensembles
-N_ensemble = 10;
-N_iterations = 5;
+N_ensemble = 5;
+N_iterations = 10;
 
 rng_seed = 41
 rng = Random.MersenneTwister(rng_seed)
 initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble);
 
 # Define EKP and run iterative solver for defined number of iterations
-ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
+# ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
 
-for n in 1:N_iterations
-    params_i = get_ϕ_final(prior, ensemble_kalman_process)
-    G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
-    EKP.update_ensemble!(ensemble_kalman_process, G_ens)
-end
+# for n in 1:N_iterations
+#     params_i = get_ϕ_final(prior, ensemble_kalman_process)
+#     G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
+#     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
+# end
 
-initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
-final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
+# final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
 
 ENV["GKSwstype"] = "nul"
-# plot prior
-plot(prior)
-png("prior_plot")
+
 # plot good model vs bad model
 theta_true = (4.7, 4.7, 15.0, 9.0)
 theta_bad = (100.0, 100.0, 100.0, 100.0)
-plot(
-    time_data,
-    physical_model(theta_true, inputs),
-    c = :black,
-    label = "Model Truth",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter
-)
-plot!(
-    time_data,
-    physical_model(theta_bad, inputs),
-    c = :red,
-    label = "Model Bad",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter
-)
-xlabel!("T")
-ylabel!("U^*")
-png("good_bad_model")
-
-# plot y vs u_star data
-plot(
-    time_data,
-    y,
-    c = :green,
-    label = "y",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter,
-)
-plot!(time_data, u_star_data, c = :red, label = "Truth u*", ms = 1.5, seriestype=:scatter)
-png("y vs ustar")
-
-# plot good model and y
-plot(
-    time_data,
-    physical_model(theta_true, inputs),
-    c = :black,
-    label = "Model Truth",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter
-)
-plot!(
-    time_data,
-    y,
-    c = :green,
-    label = "y",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter,
-)
-xlabel!("T")
-ylabel!("U^*")
-png("good model and y")
-
-# plot y, good model, and ensembles
-plot(
-    time_data,
-    y,
-    c = :green,
-    label = "y",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter,
-)
-plot!(
-    time_data,
-    physical_model(theta_true, inputs),
-    c = :black,
-    label = "Model Truth",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter
-)
-plot!(
-    time_data,
-    [physical_model(initial_ensemble[:, i], inputs) for i in 1:N_ensemble],
-    c = :red,
-    label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
-)
-plot!(
-    time_data,
-    [physical_model(final_ensemble[:, i], inputs) for i in 1:N_ensemble],
-    c = :blue,
-    label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
-)
-xlabel!("T")
-ylabel!("U^*")
-png("our_plot")
-
-println("Mean a_m:", mean(initial_ensemble[1, :])) # [param, ens_no]
-println("Mean a_h:", mean(initial_ensemble[2, :]))
-println("Mean b_m:", mean(initial_ensemble[3, :]))
-println("Mean b_h:", mean(initial_ensemble[4, :]))
-println()
-
-# Mean values in final ensemble for the two parameters of interest reflect the "truth" within some degree of 
-# uncertainty that we can quantify from the elements of `final_ensemble`.
-println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
-println("Mean a_h:", mean(final_ensemble[2, :]))
-println("Mean b_m:", mean(final_ensemble[3, :]))
-println("Mean b_h:", mean(final_ensemble[4, :]))
-println()
-
-println("Unconverged data points: ", unconverged_data)
-println("Unconverged z: ", unconverged_z)
-println("Unconverged t: ", unconverged_t)
-println()
-
-println("Stable count: ", stable)
-println("Unstable count: ", unstable)
-println("Neutral count: ", neutral)

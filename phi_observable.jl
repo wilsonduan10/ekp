@@ -84,44 +84,6 @@ dudz_data = reshape(mean(dudz_data, dims=2), Z)
 κ = 0.4
 y = uw_data ./ (κ * z_data) .* dudz_data
 
-function get_surf_flux_params(overrides)
-    # First, we set up thermodynamic parameters
-    ## This line initializes a toml dict, where we will extract parameters from
-    toml_dict = CP.create_toml_dict(FT; dict_type = "alias")
-    param_set = create_parameters(toml_dict, UF.BusingerType())
-    thermo_params = SFP.thermodynamics_params(param_set)
-
-    # initialize κ parameter
-    aliases = ["von_karman_const"]
-    κ_pairs = CP.get_parameter_values!(toml_dict, aliases, "SurfaceFluxesParameters")
-    κ_pairs = (; κ_pairs...)
-
-    # Next, we set up SF parameters
-    ## An alias for each constant we need
-    aliases = ["Pr_0_Businger", "a_m_Businger", "a_h_Businger", "ζ_a_Businger", "γ_Businger"]
-    sf_pairs = CP.get_parameter_values!(toml_dict, aliases, "UniversalFunctions")
-    sf_pairs = (; sf_pairs...) # convert parameter pairs to NamedTuple
-    ## change the keys from their alias to more concise keys
-    sf_pairs = (;
-        Pr_0 = sf_pairs.Pr_0_Businger,
-        a_m = sf_pairs.a_m_Businger,
-        a_h = sf_pairs.a_h_Businger,
-        ζ_a = sf_pairs.ζ_a_Businger,
-        γ = sf_pairs.γ_Businger,
-    )
-    # override default Businger stability function parameters with model parameters
-    sf_pairs = override_climaatmos_defaults(sf_pairs, overrides)
-
-    ufp = UF.BusingerParams{FT}(; sf_pairs...) # initialize Businger params
-
-    # Now, we initialize the variable surf_flux_params, which we will eventually pass into 
-    # surface_conditions along with mean wind data
-    UFP = typeof(ufp)
-    TPtype = typeof(thermo_params)
-    surf_flux_params = SF.Parameters.SurfaceFluxesParameters{FT, UFP, TPtype}(; κ_pairs..., ufp, thermo_params)
-    return thermo_params, surf_flux_params
-end
-
 function model(parameters, inputs)
     global Z, T
     a_m, a_h = parameters
