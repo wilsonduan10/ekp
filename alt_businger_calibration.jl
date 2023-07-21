@@ -42,13 +42,6 @@ shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 
 Z, T = size(u_data)
 
-# use √u^2 + v^2
-for i in 1:Z
-    for j in 1:T
-        u_data[i, j] = sqrt(u_data[i, j] * u_data[i, j] + v_data[i, j] * v_data[i, j])
-    end
-end
-
 # store unconverged values, potentially discover pattern
 unconverged_data = Dict{Tuple{FT, FT}, Int64}()
 unconverged_z = Dict{FT, Int64}()
@@ -59,7 +52,7 @@ unstable = 0
 neutral = 0
 function physical_model(parameters, inputs)
     a_m, a_h, b_m, b_h = parameters
-    (; u, z, time, lhf, shf, z0) = inputs
+    (; u, v, z, time, lhf, shf, z0) = inputs
 
     overrides = (; a_m, a_h, b_m, b_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides)
@@ -74,7 +67,7 @@ function physical_model(parameters, inputs)
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
         for i in 2:Z # 200 - 1, starting at 2 because 1 is surface conditions
             u_in = u[i, j]
-            v_in = FT(0)
+            v_in = v[i, j]
             z_in = z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             
@@ -115,7 +108,7 @@ function G(parameters, inputs)
     return u_star
 end
 
-inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
+inputs = (u = u_data, v = v_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
 
 Γ = 0.00005 * I
 η_dist = MvNormal(zeros(length(u_star_data)), Γ)
@@ -171,7 +164,7 @@ plot_all(time_data, y, physical_model(theta_true, inputs), initial, final, (init
 # plot y versus model truth given different z0
 plot(time_data, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter)
 
-most_inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data)
+most_inputs = (u = u_data, v = v_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data)
 z0s = [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
 for i in 1:length(z0s)
     custom_input = (; most_inputs..., z0 = z0s[i])
