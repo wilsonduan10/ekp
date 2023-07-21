@@ -4,6 +4,7 @@ using EnsembleKalmanProcesses
 using EnsembleKalmanProcesses.ParameterDistributions
 
 ENV["GKSwstype"] = "nul"
+theta_true = (4.7, 4.7, 15.0, 9.0)
 
 function plot_prior(prior)
     plot(prior)

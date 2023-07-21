@@ -34,7 +34,7 @@ z_data = Array(data.group["profiles"]["z"]) # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
 u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
 v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
-ρ_data = Array(data.group["reference"]["rho0_full"]) # (200, )
+ρ_data = Array(data.group["reference"]["rho0"]) # (200, )
 qt_data = Array(data.group["profiles"]["qt_min"]) # (200, 865)
 θ_li_data = Array(data.group["profiles"]["thetali_mean"]) # (200, 865)
 lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
@@ -169,6 +169,19 @@ initial_label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 
 final_label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
 plot_all(time_data, y, physical_model(theta_true, inputs), initial, final, (initial_label, final_label), ax)
 
+# plot y versus model truth given different z0
+plot(time_data, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter)
+
+most_inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data)
+z0s = [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
+for i in 1:length(z0s)
+    custom_input = (; most_inputs..., z0 = z0s[i])
+    output = physical_model(theta_true, custom_input)
+    plot!(time_data, output, label="z0 = " * string(z0s[i]))
+end
+xlabel!(ax[1])
+ylabel!(ax[2])
+png("images/z0_plot")
 
 # print statistics
 println("Stable count: ", stable)
