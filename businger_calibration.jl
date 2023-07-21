@@ -25,7 +25,9 @@ include("helper/graph.jl")
 
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
 mkpath(joinpath(@__DIR__, "images"))
-localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
+# localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
+localfile = "data/Stats.cfsite23_CNRM-CM5_amip_2004-2008.01.nc"
+
 data = NCDataset(localfile)
 
 # Extract data
@@ -121,8 +123,8 @@ inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_da
 η_dist = MvNormal(zeros(length(u_star_data)), Γ)
 y = u_star_data .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary et al 2021
 
-prior_u1 = constrained_gaussian("a_m", 4.0, 4, 0, Inf);
-prior_u2 = constrained_gaussian("a_h", 4.0, 4, 0, Inf);
+prior_u1 = constrained_gaussian("a_m", 4.0, 3, 0, Inf);
+prior_u2 = constrained_gaussian("a_h", 4.0, 3, 0, Inf);
 prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf);
 prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf);
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
