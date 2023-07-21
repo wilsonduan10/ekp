@@ -66,7 +66,7 @@ function get_surf_flux_params(overrides)
 
     # Next, we set up SF parameters
     ## An alias for each constant we need
-    aliases = ["Pr_0_Businger", "a_m_Businger", "a_h_Businger", "ζ_a_Businger", "γ_Businger"]
+    aliases = ["Pr_0_Businger", "a_m_Businger", "a_h_Businger", "b_m_Businger", "b_h_Businger", "ζ_a_Businger", "γ_Businger"]
     sf_pairs = CP.get_parameter_values!(toml_dict, aliases, "UniversalFunctions")
     sf_pairs = (; sf_pairs...) # convert parameter pairs to NamedTuple
     ## change the keys from their alias to more concise keys
@@ -74,6 +74,8 @@ function get_surf_flux_params(overrides)
         Pr_0 = sf_pairs.Pr_0_Businger,
         a_m = sf_pairs.a_m_Businger,
         a_h = sf_pairs.a_h_Businger,
+        b_m = sf_pairs.a_m_Businger,
+        b_h = sf_pairs.a_h_Businger,
         ζ_a = sf_pairs.ζ_a_Businger,
         γ = sf_pairs.γ_Businger,
     )
