@@ -20,18 +20,16 @@ import Thermodynamics.Parameters as TP
 import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
-include("setup_parameter_set.jl")
+include("helper/setup_parameter_set.jl")
 
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
 localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
 data = NCDataset(localfile)
 
-# Construct observables
-# try different observables - ustar, L_MO, flux (momentum, heat, buoyancy), or phi
-# first try ustar
+# Extract data
 time_data = Array(data.group["timeseries"]["t"]) # (865, )
 z_data = Array(data.group["profiles"]["z"]) # (200, )
-u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, ) likely meaned over all z
+u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
 u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
 v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
 ρ_data = Array(data.group["reference"]["rho0_full"]) # (200, )
@@ -40,9 +38,11 @@ qt_data = Array(data.group["profiles"]["qt_min"]) # (200, 865)
 lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
 shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 
+Z, T = size(u_data)
+
 # use √u^2 + v^2
-for i in 1:size(u_data)[1]
-    for j in 1:size(u_data)[2]
+for i in 1:Z
+    for j in 1:T
         u_data[i, j] = sqrt(u_data[i, j] * u_data[i, j] + v_data[i, j] * v_data[i, j])
     end
 end
@@ -55,21 +55,20 @@ unconverged_t = Dict{FT, Int64}()
 stable = 0
 unstable = 0
 neutral = 0
-
 function physical_model(parameters, inputs)
     a_m, a_h, b_m, b_h = parameters
-    (; u, z, time, lhf, shf) = inputs
+    (; u, z, time, lhf, shf, z0) = inputs
 
     overrides = (; a_m, a_h, b_m, b_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides)
 
     # Now, we loop over all the observations and call SF.surface_conditions to estimate u^*
     u_star = zeros(length(time)) # (865, )
-    for j in 1:lastindex(time) # 865
+    for j in 1:T # 865
         u_star_sum = 0.0
         total = 0
         ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
-        for i in 2:length(z) # 200 - 1, starting at 2 because 1 is surface conditions
+        for i in 2:Z # 200 - 1, starting at 2 because 1 is surface conditions
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i]
@@ -82,7 +81,7 @@ function physical_model(parameters, inputs)
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions
-            z0m = z0b = FT(0.0001)
+            z0m = z0b = z0
             gustiness = FT(1)
             kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
             sc = SF.Fluxes{FT}(; kwargs...)
@@ -110,30 +109,24 @@ function physical_model(parameters, inputs)
     return u_star
 end
 
-# Here, we define G, which returns observable values given the parameters and inputs
-# from the dataset. The observable we elect is the mean of the calculated ustar across
-# all z, which is eventually compared to the actual observed ustar.
 function G(parameters, inputs)
     u_star = physical_model(parameters, inputs) # (865, )
     return u_star
 end
 
-inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data)
+inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
 
 Γ = 0.00005 * I
 η_dist = MvNormal(zeros(length(u_star_data)), Γ)
 y = u_star_data .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary et al 2021
 
-# Assume that users have prior knowledge of approximate truth.
-# (e.g. via physical models / subset of obs / physical laws.)
 prior_u1 = constrained_gaussian("a_m", 4.0, 4, 0, Inf);
 prior_u2 = constrained_gaussian("a_h", 4.0, 4, 0, Inf);
 prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf);
 prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf);
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
-# Set up the initial ensembles
-N_ensemble = 10;
+N_ensemble = 5;
 N_iterations = 5;
 
 rng_seed = 41
@@ -149,9 +142,8 @@ for n in 1:N_iterations
     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
 end
 
-initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
+constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
-
 
 ENV["GKSwstype"] = "nul"
 # plot prior
@@ -239,7 +231,7 @@ plot!(
 )
 plot!(
     time_data,
-    [physical_model(initial_ensemble[:, i], inputs) for i in 1:N_ensemble],
+    [physical_model(constrained_initial_ensemble[:, i], inputs) for i in 1:N_ensemble],
     c = :red,
     label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
 )
@@ -253,25 +245,27 @@ xlabel!("T")
 ylabel!("U^*")
 png("our_plot")
 
-println("Mean a_m:", mean(initial_ensemble[1, :])) # [param, ens_no]
-println("Mean a_h:", mean(initial_ensemble[2, :]))
-println("Mean b_m:", mean(initial_ensemble[3, :]))
-println("Mean b_h:", mean(initial_ensemble[4, :]))
+println("Stable count: ", stable)
+println("Unstable count: ", unstable)
+println("Neutral count: ", neutral)
+
+if (length(unconverged_data) > 0)
+    println("Unconverged data points: ", unconverged_data)
+    println("Unconverged z: ", unconverged_z)
+    println("Unconverged t: ", unconverged_t)
+    println()
+end
+
+println("INITIAL ENSEMBLE STATISTICS")
+println("Mean a_m:", mean(constrained_initial_ensemble[1, :])) # [param, ens_no]
+println("Mean a_h:", mean(constrained_initial_ensemble[2, :]))
+println("Mean b_m:", mean(constrained_initial_ensemble[3, :]))
+println("Mean b_h:", mean(constrained_initial_ensemble[4, :]))
 println()
 
-# Mean values in final ensemble for the two parameters of interest reflect the "truth" within some degree of 
-# uncertainty that we can quantify from the elements of `final_ensemble`.
+println("FINAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(final_ensemble[2, :]))
 println("Mean b_m:", mean(final_ensemble[3, :]))
 println("Mean b_h:", mean(final_ensemble[4, :]))
 println()
-
-println("Unconverged data points: ", unconverged_data)
-println("Unconverged z: ", unconverged_z)
-println("Unconverged t: ", unconverged_t)
-println()
-
-println("Stable count: ", stable)
-println("Unstable count: ", unstable)
-println("Neutral count: ", neutral)

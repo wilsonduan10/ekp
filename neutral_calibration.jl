@@ -25,7 +25,7 @@ import Thermodynamics.Parameters as TP
 import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
-include("setup_parameter_set.jl")
+include("helper/setup_parameter_set.jl")
 
 #=
 Next, we download and read data from the John Hopkins Tubulence Channel Flow dataset,
@@ -221,7 +221,7 @@ plot!(
 # )
 xlabel!("Z")
 ylabel!("U^*")
-png("our_plot")
+png("images/our_plot")
 
 # Mean values in final ensemble for the two parameters of interest reflect the "truth" within some degree of 
 # uncertainty that we can quantify from the elements of `final_ensemble`.

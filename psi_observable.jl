@@ -17,7 +17,7 @@ import Thermodynamics.Parameters as TP
 import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
-include("setup_parameter_set.jl")
+include("helper/setup_parameter_set.jl")
 
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
 localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
