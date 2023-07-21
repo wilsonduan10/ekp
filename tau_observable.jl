@@ -200,15 +200,15 @@ rng = Random.MersenneTwister(rng_seed)
 initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble);
 
 # Define EKP and run iterative solver for defined number of iterations
-ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
+# ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
 
-for n in 1:N_iterations
-    params_i = get_ϕ_final(prior, ensemble_kalman_process)
-    G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
-    EKP.update_ensemble!(ensemble_kalman_process, G_ens)
-end
+# for n in 1:N_iterations
+#     params_i = get_ϕ_final(prior, ensemble_kalman_process)
+#     G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
+#     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
+# end
 
-final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
+# final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
 
 ENV["GKSwstype"] = "nul"
