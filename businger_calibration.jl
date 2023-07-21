@@ -21,8 +21,10 @@ import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
 include("helper/setup_parameter_set.jl")
+include("helper/graph.jl")
 
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
+mkpath(joinpath(@__DIR__, "images"))
 localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
 data = NCDataset(localfile)
 
@@ -145,106 +147,30 @@ end
 constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
-ENV["GKSwstype"] = "nul"
-# plot prior
-plot(prior)
-png("prior_plot")
-# plot good model vs bad model
+# plot priors
+plot_prior(prior)
+
+# plot good and bad model
 theta_true = (4.7, 4.7, 15.0, 9.0)
 theta_bad = (100.0, 100.0, 100.0, 100.0)
-plot(
-    time_data,
-    physical_model(theta_true, inputs),
-    c = :black,
-    label = "Model Truth",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter
-)
-plot!(
-    time_data,
-    physical_model(theta_bad, inputs),
-    c = :red,
-    label = "Model Bad",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter
-)
-xlabel!("T")
-ylabel!("U^*")
-png("good_bad_model")
+ax = ("T", "U*")
+plot_good_bad_model(time_data, physical_model(theta_true, inputs), physical_model(theta_bad, inputs), ax)
 
 # plot y vs u_star data
-plot(
-    time_data,
-    y,
-    c = :green,
-    label = "y",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter,
-)
-plot!(time_data, u_star_data, c = :red, label = "Truth u*", ms = 1.5, seriestype=:scatter)
-png("y vs ustar")
+plot_noise(time_data, y, u_star_data, ax)
 
 # plot good model and y
-plot(
-    time_data,
-    physical_model(theta_true, inputs),
-    c = :black,
-    label = "Model Truth",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter
-)
-plot!(
-    time_data,
-    y,
-    c = :green,
-    label = "y",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter,
-)
-xlabel!("T")
-ylabel!("U^*")
-png("good model and y")
+plot_y_versus_model(time_data, y, physical_model(theta_true, inputs))
 
 # plot y, good model, and ensembles
-plot(
-    time_data,
-    y,
-    c = :green,
-    label = "y",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter,
-)
-plot!(
-    time_data,
-    physical_model(theta_true, inputs),
-    c = :black,
-    label = "Model Truth",
-    legend = :bottomright,
-    ms = 1.5,
-    seriestype=:scatter
-)
-plot!(
-    time_data,
-    [physical_model(constrained_initial_ensemble[:, i], inputs) for i in 1:N_ensemble],
-    c = :red,
-    label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble), # reshape to convert from vector to matrix
-)
-plot!(
-    time_data,
-    [physical_model(final_ensemble[:, i], inputs) for i in 1:N_ensemble],
-    c = :blue,
-    label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble),
-)
-xlabel!("T")
-ylabel!("U^*")
-png("our_plot")
+initial = [physical_model(constrained_initial_ensemble[:, i], inputs) for i in 1:N_ensemble]
+final = [physical_model(final_ensemble[:, i], inputs) for i in 1:N_ensemble]
+initial_label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
+final_label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
+plot_all(time_data, y, physical_model(theta_true, inputs), initial, final, (initial_label, final_label), ax)
 
+
+# print statistics
 println("Stable count: ", stable)
 println("Unstable count: ", unstable)
 println("Neutral count: ", neutral)
@@ -268,4 +194,3 @@ println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(final_ensemble[2, :]))
 println("Mean b_m:", mean(final_ensemble[3, :]))
 println("Mean b_h:", mean(final_ensemble[4, :]))
-println()

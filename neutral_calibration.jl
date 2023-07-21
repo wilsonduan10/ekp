@@ -36,6 +36,7 @@ The parameters defining the dataset are given by:
 - ν = 8.00000e-06
 - Re_tau = 5185.897
 =#
+mkpath(joinpath(@__DIR__, "images"))
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
 web_datafile_path = "https://turbulence.oden.utexas.edu/channel2015/data/LM_Channel_5200_mean_prof.dat"
 localfile = "data/profiles.dat"

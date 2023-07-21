@@ -23,6 +23,7 @@ import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
 include("helper/setup_parameter_set.jl")
 
+mkpath(joinpath(@__DIR__, "images"))
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
 localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
 data = NCDataset(localfile)
@@ -169,7 +170,6 @@ initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble);
 # end
 
 # final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
-
 
 ENV["GKSwstype"] = "nul"
 # plot good model vs bad model
