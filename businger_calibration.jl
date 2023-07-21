@@ -163,7 +163,7 @@ end
 
 inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data)
 
-Γ = 0.0005 * I
+Γ = 0.00005 * I
 η_dist = MvNormal(zeros(length(u_star_data)), Γ)
 y = u_star_data .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary et al 2021
 
