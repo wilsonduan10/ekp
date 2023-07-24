@@ -129,4 +129,6 @@ function generate_bc_plots(params, cfsite, month, new_folder = false)
 
     # plot y versus model truth given different z0
     plot_z0s(params.x, params.y, params.z0s, params.model, params.theta_true, params.most_inputs, kwargs)
+
+    println("Generated plots in folder: images/bc_$(cfsite)_$(month)_$(bc_number)")
 end
