@@ -1,7 +1,12 @@
 #=
-In this file, we calibrate four parameters: a\_m, a\_h, b\_m, and b\_h in the Businger
-stability functions, where a_m and a_h are parameters in the stable regime, and b_m and
-b_h pertain to the unstable regime. 
+In this file, we use the ensemble kalman inversion process to calibrate four parameters:
+a\_m, a\_h, b\_m, and b\_h in the Businger stability functions, where a_m and a_h are parameters
+in the stable regime, and b_m and b_h pertain to the unstable regime. We use data from Shen 2022,
+cfSite LES data with GCM forcings. We use u_star as our observable, and predict u_star using 
+the function surface_conditions from the SurfaceFluxes.jl package, which uses the Monin-Obukhov
+similarity theory to calculate important scales such as the monin-obukhov length and u_star. The 
+goal of this process is to analyze the efficacy of EKP in the context of surface fluxes. We visualize
+the success of the model through several plots.
 =#
 
 # Imports
