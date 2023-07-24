@@ -5,14 +5,14 @@ using EnsembleKalmanProcesses.ParameterDistributions
 
 mkpath(joinpath(@__DIR__, "../images"))
 
-function next_bc_number(cfsite)
-    bc_folders = filter(x -> startswith(x, "bc_$cfsite"), readdir(joinpath(@__DIR__, "../images")))
-    bc_nums = map(x -> parse(Int64, x[7:end]), bc_folders)
+function next_bc_number(cfsite, month)
+    bc_folders = filter(x -> startswith(x, "bc_$(cfsite)_$(month)"), readdir(joinpath(@__DIR__, "../images")))
+    string_length = length("bc_$(cfsite)_$(month)")
+    bc_nums = map(x -> parse(Int64, x[string_length+2:end]), bc_folders)
     bc_number = 1
     if (length(bc_nums) > 0)
         bc_number = maximum(bc_nums) + 1
     end
-    mkpath(joinpath(@__DIR__, "../images/bc$bc_number"))
     return bc_number
 end
 
@@ -20,13 +20,13 @@ ENV["GKSwstype"] = "nul"
 theta_true = (4.7, 4.7, 15.0, 9.0)
 
 function plot_prior(prior, kwargs)
-    (; axes, cfsite, bc_number) = kwargs
+    (; axes, cfsite, month, bc_number) = kwargs
     plot(prior)
-    png("images/bc_$(cfsite)_$(bc_number)/prior_plot")
+    png("images/bc_$(cfsite)_$(month)_$(bc_number)/prior_plot")
 end
 
 function plot_good_bad_model(x, model, model_truth, model_bad, inputs, kwargs)
-    (; axes, cfsite, bc_number) = kwargs
+    (; axes, cfsite, month, bc_number) = kwargs
     truth = model(model_truth, inputs)
     bad = model(model_bad, inputs)
     plot(x, truth, c = :black, label = "Model Truth", legend = :bottomright, ms = 1.5, seriestype=:scatter)
@@ -35,22 +35,22 @@ function plot_good_bad_model(x, model, model_truth, model_bad, inputs, kwargs)
         xlabel!(axes[1])
         ylabel!(axes[2])
     end
-    png("images/bc_$(cfsite)_$(bc_number)/good_bad_model")
+    png("images/bc_$(cfsite)_$(month)_$(bc_number)/good_bad_model")
 end
 
 function plot_noise(x, y, data, kwargs)
-    (; axes, cfsite, bc_number) = kwargs
+    (; axes, cfsite, month, bc_number) = kwargs
     plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter)
     plot!(x, data, c = :red, label = "Data Truth", ms = 1.5, seriestype=:scatter)
     if (!isnothing(axes))
         xlabel!(axes[1])
         ylabel!(axes[2])
     end
-    png("images/bc_$(cfsite)_$(bc_number)/y vs data")
+    png("images/bc_$(cfsite)_$(month)_$(bc_number)/y vs data")
 end
 
 function plot_y_versus_model(x, y, model, theta_true, inputs, kwargs)
-    (; axes, cfsite, bc_number) = kwargs
+    (; axes, cfsite, month, bc_number) = kwargs
     truth = model(theta_true, inputs)
     plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter,)
     plot!(x, truth, c = :black, label = "Model Truth", legend = :bottomright, ms = 1.5, seriestype=:scatter)
@@ -58,11 +58,11 @@ function plot_y_versus_model(x, y, model, theta_true, inputs, kwargs)
         xlabel!(axes[1])
         ylabel!(axes[2])
     end
-    png("images/bc_$(cfsite)_$(bc_number)/good model and y")
+    png("images/bc_$(cfsite)_$(month)_$(bc_number)/good model and y")
 end
 
 function plot_all(x, y, model, theta_true, inputs, ensembles, N_ensemble, kwargs)
-    (; axes, cfsite, bc_number) = kwargs
+    (; axes, cfsite, month, bc_number) = kwargs
     initial_ensemble, final_ensemble = ensembles
     initial = [model(initial_ensemble[:, i], inputs) for i in 1:N_ensemble]
     final = [model(final_ensemble[:, i], inputs) for i in 1:N_ensemble]
@@ -77,11 +77,11 @@ function plot_all(x, y, model, theta_true, inputs, ensembles, N_ensemble, kwargs
         xlabel!(axes[1])
         ylabel!(axes[2])
     end
-    png("images/bc_$(cfsite)_$(bc_number)/our_plot")
+    png("images/bc_$(cfsite)_$(month)_$(bc_number)/our_plot")
 end
 
 function plot_z0s(x, y, z0s, model, theta_true, most_inputs, kwargs)
-    (; axes, cfsite, bc_number) = kwargs
+    (; axes, cfsite, month, bc_number) = kwargs
     plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter)
 
     for i in 1:length(z0s)
@@ -94,19 +94,20 @@ function plot_z0s(x, y, z0s, model, theta_true, most_inputs, kwargs)
         xlabel!(axes[1])
         ylabel!(axes[2])
     end
-    png("images/bc_$(cfsite)_$(bc_number)/z0_plot")
+    png("images/bc_$(cfsite)_$(month)_$(bc_number)/z0_plot")
 end
 
-function generate_bc_plots(params, cfsite, new_folder = false)
+function generate_bc_plots(params, cfsite, month, new_folder = false)
     bc_number = 0
     if (new_folder)
-        bc_number = next_bc_number(cfsite)
+        bc_number = next_bc_number(cfsite, month)
     end
-    mkpath(joinpath(@__DIR__, "../images/bc_$(cfsite)_$(bc_number)"))
+    mkpath(joinpath(@__DIR__, "../images/bc_$(cfsite)_$(month)_$(bc_number)"))
     
     kwargs = (;
         axes = params.ax,
         cfsite = cfsite,
+        month = month,
         bc_number = bc_number
     )
 

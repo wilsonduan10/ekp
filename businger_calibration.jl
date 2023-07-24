@@ -24,10 +24,10 @@ include("helper/setup_parameter_set.jl")
 include("helper/graph.jl")
 
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-# localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
-cfsite = 23
-localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.01.nc"
 
+cfsite = 23
+month = "01"
+localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
 # Extract data
@@ -165,7 +165,7 @@ plot_params = (;
     z0s = [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
 )
 
-generate_bc_plots(plot_params, cfsite)
+generate_bc_plots(plot_params, cfsite, month, true)
 
 # print statistics
 println("Stable count: ", stable)
