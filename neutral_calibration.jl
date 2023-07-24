@@ -3,7 +3,8 @@ ANALYSIS
 
 Because of the neutral conditions, L_MO is always infinity, so ζ = z/L_MO is always 0. 
 In the Businger formulation, ϕ = 1 + a_m * ζ, and since ζ is always zero, ϕ will equal 1
-no matter the a_m. As a result, a_m is not calibrated at all.
+no matter the a_m. As a result, a_m is not calibrated at all, and the final parameters
+are the same as the initial parameters.
 
 =#
 using LinearAlgebra, Random

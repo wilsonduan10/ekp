@@ -1,3 +1,4 @@
+# uses u and v rather than combining them into the variable u with u = sqrt(u^2 + v^2)
 using LinearAlgebra, Random
 using Distributions, Plots
 using EnsembleKalmanProcesses
