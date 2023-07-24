@@ -24,9 +24,9 @@ include("helper/setup_parameter_set.jl")
 include("helper/graph.jl")
 
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-mkpath(joinpath(@__DIR__, "images"))
 # localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
-localfile = "data/Stats.cfsite23_CNRM-CM5_amip_2004-2008.01.nc"
+cfsite = 23
+localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.01.nc"
 
 data = NCDataset(localfile)
 
@@ -148,41 +148,24 @@ end
 constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
-# plot priors
-plot_prior(prior)
+# parameters for plotting
+plot_params = (;
+    x = time_data,
+    y = y,
+    observable = u_star_data,
+    ax = ("T", "U*"),
+    prior = prior,
+    model = physical_model,
+    inputs = inputs,
+    theta_true = (4.7, 4.7, 15.0, 9.0),
+    theta_bad = (100.0, 100.0, 100.0, 100.0),
+    ensembles = (constrained_initial_ensemble, final_ensemble),
+    N_ensemble = N_ensemble,
+    most_inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data),
+    z0s = [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
+)
 
-# plot good and bad model
-theta_true = (4.7, 4.7, 15.0, 9.0)
-theta_bad = (100.0, 100.0, 100.0, 100.0)
-ax = ("T", "U*")
-plot_good_bad_model(time_data, physical_model(theta_true, inputs), physical_model(theta_bad, inputs), ax)
-
-# plot y vs u_star data
-plot_noise(time_data, y, u_star_data, ax)
-
-# plot good model and y
-plot_y_versus_model(time_data, y, physical_model(theta_true, inputs))
-
-# plot y, good model, and ensembles
-initial = [physical_model(constrained_initial_ensemble[:, i], inputs) for i in 1:N_ensemble]
-final = [physical_model(final_ensemble[:, i], inputs) for i in 1:N_ensemble]
-initial_label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
-final_label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
-plot_all(time_data, y, physical_model(theta_true, inputs), initial, final, (initial_label, final_label), ax)
-
-# plot y versus model truth given different z0
-plot(time_data, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter)
-
-most_inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data)
-z0s = [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
-for i in 1:length(z0s)
-    custom_input = (; most_inputs..., z0 = z0s[i])
-    output = physical_model(theta_true, custom_input)
-    plot!(time_data, output, label="z0 = " * string(z0s[i]))
-end
-xlabel!(ax[1])
-ylabel!(ax[2])
-png("images/z0_plot")
+generate_bc_plots(plot_params, cfsite)
 
 # print statistics
 println("Stable count: ", stable)
