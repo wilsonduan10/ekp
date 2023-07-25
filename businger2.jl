@@ -1,4 +1,7 @@
 #=
+The difference in this file is that I use a different thermodynamic function PhaseEquil_pTq
+to establish the thermodynamic state.
+
 In this file, we use the ensemble kalman inversion process to calibrate four parameters:
 a\_m, a\_h, b\_m, and b\_h in the Businger stability functions, where a_m and a_h are parameters
 in the stable regime, and b_m and b_h pertain to the unstable regime. We use data from Shen 2022,
@@ -53,9 +56,10 @@ z_data = Array(data.group["profiles"]["z"]) # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
 u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
 v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
-ρ_data = Array(data.group["reference"]["rho0"]) # (200, )
+p_data = Array(data.group["reference"]["p0"]) # (200, )
+surface_temp_data = Array(data.group["timeseries"]["surface_temperature"])
+temp_data = Array(data.group["profiles"]["temperature_mean"]) # (200, 865)
 qt_data = Array(data.group["profiles"]["qt_min"]) # (200, 865)
-θ_li_data = Array(data.group["profiles"]["thetali_mean"]) # (200, 865)
 lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
 shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 
@@ -91,7 +95,7 @@ function physical_model(parameters, inputs)
         total = 0
         # Define surface conditions based on moist air density, liquid ice potential temperature, and total specific humidity 
         # given from cfSite. 
-        ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
+        ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
@@ -102,7 +106,7 @@ function physical_model(parameters, inputs)
             z_in = z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             
-            ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
+            ts_in = TD.PhaseEquil_ρTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions
@@ -198,7 +202,7 @@ plot_params = (;
     z0s = [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
 )
 
-generate_all_plots(plot_params, "bc", cfsite, month, true)
+generate_all_plots(plot_params, "bc2", cfsite, month, true)
 
 # Print the unconverged data points to identify a pattern.
 if (length(unconverged_data) > 0)
