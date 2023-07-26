@@ -115,17 +115,17 @@ end
 Γ = 0.005 * I # assume this is the amount of noise in observations y
 inputs = (; z = z_data, L_MO = lmo_data)
 
-prior_u1 = constrained_gaussian("a_m", 4.0, 3, -Inf, Inf);
-prior_u2 = constrained_gaussian("a_h", 4.0, 3, -Inf, Inf);
+prior_u1 = constrained_gaussian("a_m", 4.0, 3, -Inf, Inf)
+prior_u2 = constrained_gaussian("a_h", 4.0, 3, -Inf, Inf)
 prior = combine_distributions([prior_u1, prior_u2])
 
 # Set up the initial ensembles
-N_ensemble = 5;
-N_iterations = 5;
+N_ensemble = 5
+N_iterations = 5
 
 rng_seed = 41
 rng = Random.MersenneTwister(rng_seed)
-initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble);
+initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble)
 
 # Define EKP and run iterative solver for defined number of iterations
 ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)

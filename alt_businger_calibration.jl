@@ -115,18 +115,18 @@ inputs = (u = u_data, v = v_data, z = z_data, time = time_data, lhf = lhf_data, 
 η_dist = MvNormal(zeros(length(u_star_data)), Γ)
 y = u_star_data .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary et al 2021
 
-prior_u1 = constrained_gaussian("a_m", 4.0, 4, 0, Inf);
-prior_u2 = constrained_gaussian("a_h", 4.0, 4, 0, Inf);
-prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf);
-prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf);
+prior_u1 = constrained_gaussian("a_m", 4.0, 4, 0, Inf)
+prior_u2 = constrained_gaussian("a_h", 4.0, 4, 0, Inf)
+prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf)
+prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
-N_ensemble = 5;
-N_iterations = 5;
+N_ensemble = 5
+N_iterations = 5
 
 rng_seed = 41
 rng = Random.MersenneTwister(rng_seed)
-initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble);
+initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble)
 
 # Define EKP and run iterative solver for defined number of iterations
 ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)

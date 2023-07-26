@@ -157,20 +157,20 @@ y = u_star_data .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary et
 
 # Define the prior parameter values which we wish to recover in our pipeline. They are constrained
 # to be non-negative due to physical laws, and their mean is given by Businger et al 1971.
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf);
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf);
-prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf);
-prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf);
+prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
+prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
+prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf)
+prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
 # Hyperparameters: we find it sufficient to define just 5 ensembles and iterations.
-N_ensemble = 5;
-N_iterations = 5;
+N_ensemble = 5
+N_iterations = 5
 
 # Define EKP process.
 rng_seed = 41
 rng = Random.MersenneTwister(rng_seed)
-initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble);
+initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble)
 
 ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
 

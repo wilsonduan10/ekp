@@ -146,19 +146,19 @@ y = τ_data .+ rand(η_dist)
 
 # Assume that users have prior knowledge of approximate truth.
 # (e.g. via physical models / subset of obs / physical laws.)
-prior_u1 = constrained_gaussian("a_m", 4.0, 3, -Inf, Inf);
-prior_u2 = constrained_gaussian("a_h", 4.0, 3, -Inf, Inf);
-prior_u3 = constrained_gaussian("b_m", 15.0, 5, 0, Inf);
-prior_u4 = constrained_gaussian("b_h", 9.0, 4, 0, Inf);
+prior_u1 = constrained_gaussian("a_m", 4.0, 3, -Inf, Inf)
+prior_u2 = constrained_gaussian("a_h", 4.0, 3, -Inf, Inf)
+prior_u3 = constrained_gaussian("b_m", 15.0, 5, 0, Inf)
+prior_u4 = constrained_gaussian("b_h", 9.0, 4, 0, Inf)
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
 # Set up the initial ensembles
-N_ensemble = 5;
-N_iterations = 10;
+N_ensemble = 5
+N_iterations = 10
 
 rng_seed = 41
 rng = Random.MersenneTwister(rng_seed)
-initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble);
+initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble)
 
 # Define EKP and run iterative solver for defined number of iterations
 # ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
