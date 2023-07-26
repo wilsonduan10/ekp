@@ -1,4 +1,3 @@
-# incomplete
 using LinearAlgebra, Random
 using Distributions, Plots
 using EnsembleKalmanProcesses
@@ -22,7 +21,7 @@ include("helper/setup_parameter_set.jl")
 
 mkpath(joinpath(@__DIR__, "images"))
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
+localfile = "data/Stats.cfsite23_CNRM-CM5_amip_2004-2008.01.nc"
 data = NCDataset(localfile);
 
 # Construct observables
@@ -33,12 +32,9 @@ z_data = Array(data.group["profiles"]["z"]) # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, ) likely meaned over all z
 u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
 v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
-w_data = Array(data.group["profiles"]["w_mean"]) # (200, 865)
 lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
 shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 lmo_data = Array(data.group["timeseries"]["obukhov_length_mean"]) # (865, )
-# uw_data = Array(data.group["profiles"]["u_sgs_flux_z"]) # (200, 865)
-# vw_data = Array(data.group["profiles"]["v_sgs_flux_z"]) # (200, 865)
 
 Z, T = size(u_data) # dimension variables
 
