@@ -28,14 +28,15 @@ data = NCDataset(localfile);
 # Construct observables
 # try different observables - ustar, L_MO, flux (momentum, heat, buoyancy), or phi
 # first try ustar
-time_data = Array(data.group["timeseries"]["t"]) # (865, )
+time_length = 600
+time_data = Array(data.group["timeseries"]["t"])[1:time_length] # (865, )
 z_data = Array(data.group["profiles"]["z"]) # (200, )
-u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, ) likely meaned over all z
-u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
-v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
-lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
-shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
-lmo_data = Array(data.group["timeseries"]["obukhov_length_mean"]) # (865, )
+u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"])[1:time_length] # (865, ) likely meaned over all z
+u_data = Array(data.group["profiles"]["u_mean"])[:, 1:time_length] # (200, 865)
+v_data = Array(data.group["profiles"]["v_mean"])[:, 1:time_length] # (200, 865)
+lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"])[1:time_length] # (865, )
+shf_data = Array(data.group["timeseries"]["shf_surface_mean"])[1:time_length] # (865, )
+lmo_data = Array(data.group["timeseries"]["obukhov_length_mean"])[1:time_length] # (865, )
 
 Z, T = size(u_data) # dimension variables
 
@@ -102,7 +103,7 @@ rng = Random.MersenneTwister(rng_seed)
 initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble)
 
 # Define EKP and run iterative solver for defined number of iterations
-# ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
+ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
 
 # for n in 1:N_iterations
 #     params_i = get_ϕ_final(prior, ensemble_kalman_process)
@@ -127,10 +128,10 @@ function plt(timestep)
     png("ψ_plot_$(timestep)")
 end
 plt(1)
-plt(200)
-plt(400)
-plt(600)
-plt(800)
+plt(Int64(time_length / 4))
+plt(Int64(time_length / 2))
+plt(3 * Int64(time_length / 4))
+plt(time_length)
 
 # We print the mean parameters of the initial and final ensemble to identify how
 # the parameters evolved to fit the dataset. 
