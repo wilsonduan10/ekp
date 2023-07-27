@@ -42,7 +42,7 @@ include("helper/graph.jl")
 # We must first download the netCDF datasets and place them into the data/ directory. We have the option to choose
 # the cfsite and the month where data is taken from, as long as the data has been downloaded.
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-cfsite = 17
+cfsite = 13
 month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
