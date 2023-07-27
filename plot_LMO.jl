@@ -24,8 +24,9 @@ import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
 
 include("helper/setup_parameter_set.jl")
-include("helper/graph.jl")
 
+mkpath(joinpath(@__DIR__, "images"))
+mkpath(joinpath(@__DIR__, "images/L_MO_images"))
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
 cfsite = 10
 month = "07"
@@ -41,6 +42,9 @@ v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
 ρ_data = Array(data.group["reference"]["rho0"]) # (200, )
 qt_data = Array(data.group["profiles"]["qt_min"]) # (200, 865)
 θ_li_data = Array(data.group["profiles"]["thetali_mean"]) # (200, 865)
+p_data = Array(data.group["reference"]["p0"]) # (200, )
+surface_temp_data = Array(data.group["timeseries"]["surface_temperature"])
+temp_data = Array(data.group["profiles"]["temperature_mean"]) # (200, 865)
 lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
 shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 lmo_data = Array(data.group["timeseries"]["obukhov_length_mean"]) # (865, )
@@ -58,7 +62,7 @@ unconverged_data = Dict{Tuple{FT, FT}, Int64}()
 unconverged_z = Dict{FT, Int64}()
 unconverged_t = Dict{FT, Int64}()
 
-function get_LMO(parameters, inputs)
+function get_LMO(parameters, inputs, fluxes = true, ρθq = true)
     a_m, a_h, b_m, b_h = parameters
     (; u, z, time, lhf, shf, z0) = inputs
 
@@ -72,7 +76,11 @@ function get_LMO(parameters, inputs)
         total = 0
         # Define surface conditions based on moist air density, liquid ice potential temperature, and total specific humidity 
         # given from cfSite. 
-        ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
+        if (ρθq)
+            ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
+        else
+            ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
+        end
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
@@ -83,16 +91,23 @@ function get_LMO(parameters, inputs)
             z_in = z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             
-            ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
+            if (ρθq)
+                ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
+            else
+                ts_in = TD.PhaseEquil_ρTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
+            end
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions
             z0m = z0b = z0
             gustiness = FT(1)
-            kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
-            sc = SF.Fluxes{FT}(; kwargs...)
-            # kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
-            # sc = SF.ValuesOnly{FT}(; kwargs...)
+            if (fluxes)
+                kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
+                sc = SF.Fluxes{FT}(; kwargs...)
+            else
+                kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
+                sc = SF.ValuesOnly{FT}(; kwargs...)
+            end
 
             # Now, we call surface_conditions and store the calculated ustar. We surround it in a try catch
             # to account for unconverged fluxes.
@@ -125,12 +140,48 @@ ENV["GKSwstype"] = "nul"
 theta_true = (4.7, 4.7, 15.0, 9.0)
 most_inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data)
 z0s = [0.0001]
+# Generate plots with ρθq = true
+# plot with Fluxes
 plot(time_data, lmo_data, c=:black, label="Data L_MO", legend=:bottomright)
 for i in 1:length(z0s)
     custom_input = (; most_inputs..., z0 = z0s[i])
-    output = get_LMO(theta_true, custom_input)
-    plot!(time_data, output, label="z0 = " * string(z0s[i]), linewidth=2)
+    output = get_LMO(theta_true, custom_input, true, true)
+    plot!(time_data, output, label="z0 = " * string(z0s[i]), seriestype=:scatter, ms=1.5)
 end
 xlabel!("Time")
 ylabel!("L_MO")
-png("L_MO_plot")
+png("images/L_MO_images/fluxes_1")
+
+# plot with ValuesOnly
+plot(time_data, lmo_data, c=:black, label="Data L_MO", legend=:bottomright)
+for i in 1:length(z0s)
+    custom_input = (; most_inputs..., z0 = z0s[i])
+    output = get_LMO(theta_true, custom_input, false, true)
+    plot!(time_data, output, label="z0 = " * string(z0s[i]), seriestype=:scatter, ms=1.5)
+end
+xlabel!("Time")
+ylabel!("L_MO")
+png("images/L_MO_images/values_only_1")
+
+# Generate plots with ρθq = false
+# plot with Fluxes
+plot(time_data, lmo_data, c=:black, label="Data L_MO", legend=:bottomright)
+for i in 1:length(z0s)
+    custom_input = (; most_inputs..., z0 = z0s[i])
+    output = get_LMO(theta_true, custom_input, true, false)
+    plot!(time_data, output, label="z0 = " * string(z0s[i]), seriestype=:scatter, ms=1.5)
+end
+xlabel!("Time")
+ylabel!("L_MO")
+png("images/L_MO_images/fluxes_2")
+
+# plot with ValuesOnly
+plot(time_data, lmo_data, c=:black, label="Data L_MO", legend=:bottomright)
+for i in 1:length(z0s)
+    custom_input = (; most_inputs..., z0 = z0s[i])
+    output = get_LMO(theta_true, custom_input, false, false)
+    plot!(time_data, output, label="z0 = " * string(z0s[i]), seriestype=:scatter, ms=1.5)
+end
+xlabel!("Time")
+ylabel!("L_MO")
+png("images/L_MO_images/values_only_2")

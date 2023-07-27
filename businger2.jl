@@ -1,5 +1,6 @@
 #=
-The difference in this file is that I use a different thermodynamic function PhaseEquil_pTq
+This file is the same as businger_calibration.jl, but with one difference.
+The difference in this file is that I use a different thermodynamic function: PhaseEquil_pTq
 to establish the thermodynamic state.
 
 In this file, we use the ensemble kalman inversion process to calibrate four parameters:
