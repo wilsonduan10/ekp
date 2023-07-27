@@ -49,6 +49,8 @@ shf_data = Array(surf_obs_data["hs"]) # (8112, )
 z0m_data = Array(ECMWF_data["surf-roughness-length"])[169:end] # (8112, )
 z0b_data = Array(ECMWF_data["surface-roughness-length-heat"])[169:end] # (8112, )
 p_data = Array(ECMWF_data["p"])[:, 169:end]
+# sigma_data = Array(ECMWF_data["sigma"])
+# sigmah_data = Array(ECMWF_data["sigmah"])
 qt_data = qv .+ ql .+ qi # (31, 8112)
 
 # CAREFUL WITH SURFACE TEMPERATURE LOTS OF VALUES ARE 9999.0
@@ -67,23 +69,40 @@ for i in 1:Z
     end
 end
 
+a_m = 4.7
+a_h = 4.7
+b_m = 15.0
+b_h = 9.0
 overrides = (; a_m, a_h, b_m, b_h)
 thermo_params, surf_flux_params = get_surf_flux_params(overrides)
 
-ρ_data = zeros(Z, T)
-for j in 1:T
-    for i in 1:Z
-        ts = TD.PhaseEquil_pTq(thermo_params, p_data[i, j], temp_data[i, j], qt_data[i, j])
-        ρ_data[i, j] = air_density(thermo_params, ts)
-    end
-end
 
+M = 28
+R = 0.287
+g = 9.81
+T0 = surface_pressure_data .+ 273
 z_data = zeros(Z)
 for j in 1:T
-    temp_data = (p_data[:, j] .- surface_pressure_data[j]) ./ (ρ_data[:, j] .* 9.81)
-    z_data = z_data .+ temp_data
+    temp = log.(p_data[:, j] ./ surface_pressure_data[j])
+    temp *= -R * T0[j] / (g * M)
+    z_data = z_data .+ temp
 end
 z_data /= T
+
+# ρ_data = zeros(Z, T)
+# for j in 1:T
+#     for i in 1:Z
+#         ts = TD.PhaseEquil_pTq(thermo_params, p_data[i, j], temp_data[i, j], qt_data[i, j])
+#         ρ_data[i, j] = air_density(thermo_params, ts)
+#     end
+# end
+
+# z_data = zeros(Z)
+# for j in 1:T
+#     temp_data = (p_data[:, j] .- surface_pressure_data[j]) ./ (ρ_data[:, j] .* 9.81)
+#     z_data = z_data .+ temp_data
+# end
+# z_data /= T
 
 unconverged_data = Dict{Tuple{FT, FT}, Int64}()
 unconverged_z = Dict{FT, Int64}()

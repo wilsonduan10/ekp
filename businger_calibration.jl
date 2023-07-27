@@ -42,8 +42,8 @@ include("helper/graph.jl")
 # We must first download the netCDF datasets and place them into the data/ directory. We have the option to choose
 # the cfsite and the month where data is taken from, as long as the data has been downloaded.
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-cfsite = 10
-month = "07"
+cfsite = 23
+month = "01"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
@@ -147,11 +147,17 @@ end
 # Define inputs based on data, to be fed into the physical model.
 inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
 
-# We define the noise parameter η, and add normally distributed noise to the given u_star_data
-# in order to define our observable y.
-Γ = 0.00005 * I
-η_dist = MvNormal(zeros(length(u_star_data)), Γ)
-y = u_star_data .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary et al 2021
+# The observation data is noisy by default, and we estimate the noise by calculating variance from mean
+# May be an overestimate of noise, but that is ok.
+variance = 0.0
+for u_star in u_star_data
+    global variance
+    variance += (mean(u_star_data) - u_star) * (mean(u_star_data) - u_star)
+end
+variance /= T
+
+Γ = variance * I
+y = u_star_data
 
 # Define the prior parameter values which we wish to recover in our pipeline. They are constrained
 # to be non-negative due to physical laws, and their mean is given by Businger et al 1971.
@@ -187,7 +193,6 @@ final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 plot_params = (;
     x = time_data,
     y = y,
-    observable = u_star_data,
     ax = ("T", "U*"),
     prior = prior,
     model = physical_model,

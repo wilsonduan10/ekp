@@ -136,10 +136,6 @@ function generate_all_plots(params, filename, cfsite, month, new_folder = false)
     # plot good and bad model
     plot_good_bad_model(params.x, params.model, params.theta_true, params.theta_bad, params.inputs, kwargs)
 
-    # plot y vs u_star data
-    u_star_data = params.observable
-    plot_noise(params.x, params.y, u_star_data, kwargs)
-
     # plot good model and y
     plot_y_versus_model(params.x, params.y, params.model, params.theta_true, params.inputs, kwargs)
 
@@ -170,10 +166,6 @@ function generate_SHEBA_plots(params, new_folder = false)
 
     # plot good and bad model
     plot_good_bad_model(params.x, params.model, params.theta_true, params.theta_bad, params.inputs, kwargs)
-
-    # plot y vs u_star data
-    u_star_data = params.observable
-    plot_noise(params.x, params.y, u_star_data, kwargs)
 
     # plot good model and y
     plot_y_versus_model(params.x, params.y, params.model, params.theta_true, params.inputs, kwargs)

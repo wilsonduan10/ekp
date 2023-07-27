@@ -89,10 +89,10 @@ function get_LMO(parameters, inputs)
             # We provide a few additional parameters for SF.surface_conditions
             z0m = z0b = z0
             gustiness = FT(1)
-            # kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
-            # sc = SF.Fluxes{FT}(; kwargs...)
-            kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
-            sc = SF.ValuesOnly{FT}(; kwargs...)
+            kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
+            sc = SF.Fluxes{FT}(; kwargs...)
+            # kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
+            # sc = SF.ValuesOnly{FT}(; kwargs...)
 
             # Now, we call surface_conditions and store the calculated ustar. We surround it in a try catch
             # to account for unconverged fluxes.
