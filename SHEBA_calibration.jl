@@ -1,3 +1,4 @@
+# same pipeline of Businger calibration but with SHEBA data
 using LinearAlgebra, Random
 using Distributions, Plots
 using EnsembleKalmanProcesses
@@ -25,13 +26,18 @@ include("helper/setup_parameter_set.jl")
 include("helper/graph.jl")
 
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
+
+# get data from data folder
 EC_tend_filepath = "data/EC_tend.nc"
 ECMWF_filepath = "data/ECMWF.nc"
 surf_obs_filepath = "data/surf_obs.nc"
+
 ECMWF_data = NCDataset(ECMWF_filepath)
 EC_data = NCDataset(EC_tend_filepath)
 surf_obs_data = NCDataset(surf_obs_filepath)
 
+# I index all data from ECMWF and EC_tend starting from 169 in order to align it with the data
+# from surf_obs_data, so that all data start on October 29, 1997
 time_data = Array(ECMWF_data["yymmddhh"])[169:end] # (8112, )
 time_data2 = Array(surf_obs_data["Jdd"]) # (8112, )
 time_data3 = Array(EC_data["yymmddhh"])[169:end] # (8112, )
@@ -49,8 +55,6 @@ shf_data = Array(surf_obs_data["hs"]) # (8112, )
 z0m_data = Array(ECMWF_data["surf-roughness-length"])[169:end] # (8112, )
 z0b_data = Array(ECMWF_data["surface-roughness-length-heat"])[169:end] # (8112, )
 p_data = Array(ECMWF_data["p"])[:, 169:end]
-# sigma_data = Array(ECMWF_data["sigma"])
-# sigmah_data = Array(ECMWF_data["sigmah"])
 qt_data = qv .+ ql .+ qi # (31, 8112)
 
 # CAREFUL WITH SURFACE TEMPERATURE LOTS OF VALUES ARE 9999.0
@@ -64,16 +68,10 @@ Z, T = size(u_data) # extract dimensions for easier indexing
 
 # We combine the u and v velocities into a single number to facilitate analysis: u = √u^2 + v^2
 for i in 1:Z
-    for j in 1:T
-        u_data[i, j] = sqrt(u_data[i, j] * u_data[i, j] + v_data[i, j] * v_data[i, j])
-    end
+    u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
 end
 
-a_m = 4.7
-a_h = 4.7
-b_m = 15.0
-b_h = 9.0
-overrides = (; a_m, a_h, b_m, b_h)
+overrides = (;)
 thermo_params, surf_flux_params = get_surf_flux_params(overrides)
 
 

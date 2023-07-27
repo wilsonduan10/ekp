@@ -3,3 +3,4 @@ data/
 .DS_STORE
 *.toml
 literated/
+test.jl

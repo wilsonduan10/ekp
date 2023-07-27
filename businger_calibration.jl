@@ -42,7 +42,7 @@ include("helper/graph.jl")
 # We must first download the netCDF datasets and place them into the data/ directory. We have the option to choose
 # the cfsite and the month where data is taken from, as long as the data has been downloaded.
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-cfsite = 10
+cfsite = 17
 month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
@@ -63,9 +63,7 @@ Z, T = size(u_data) # extract dimensions for easier indexing
 
 # We combine the u and v velocities into a single number to facilitate analysis: u = √u^2 + v^2
 for i in 1:Z
-    for j in 1:T
-        u_data[i, j] = sqrt(u_data[i, j] * u_data[i, j] + v_data[i, j] * v_data[i, j])
-    end
+    u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
 end
 
 # Because the model sometimes fails to converge, we store unconverged values in a dictionary
