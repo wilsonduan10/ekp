@@ -95,6 +95,13 @@ function override_climaatmos_defaults(defaults::NamedTuple, overrides::NamedTupl
     return merge(defaults, intersect_overrides)
 end
 
+function get_thermodynamic_defaults()
+    toml_dict = CP.create_toml_dict(FT; dict_type = "alias")
+    aliases = string.(fieldnames(TD.Parameters.ThermodynamicsParameters))
+    pairs = CP.get_parameter_values!(toml_dict, aliases, "Thermodynamics")
+    return pairs
+end
+
 function get_surf_flux_params(overrides)
     # First, we set up thermodynamic parameters
     ## This line initializes a toml dict, where we will extract parameters from

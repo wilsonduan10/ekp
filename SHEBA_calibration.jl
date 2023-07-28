@@ -38,23 +38,27 @@ surf_obs_data = NCDataset(surf_obs_filepath)
 
 # I index all data from ECMWF and EC_tend starting from 169 in order to align it with the data
 # from surf_obs_data, so that all data start on October 29, 1997
-time_data = Array(ECMWF_data["yymmddhh"])[169:end] # (8112, )
-time_data2 = Array(surf_obs_data["Jdd"]) # (8112, )
-time_data3 = Array(EC_data["yymmddhh"])[169:end] # (8112, )
+# I also reverse the order of the levels such that the first index is the lowest level, and 
+# greater levels = greater level instead of before
+
+# timeseries
+time_data = Array(surf_obs_data["Jdd"]) # (8112, )
 u_star_data = Array(surf_obs_data["ustar"]) # (8112, )
-u_data = Array(EC_data["u"])[:, 169:end]
-v_data = Array(EC_data["v"])[:, 169:end]
-qv = Array(ECMWF_data["qv"])[:, 169:end]
-ql = Array(ECMWF_data["ql"])[:, 169:end]
-qi = Array(ECMWF_data["qi"])[:, 169:end]
 surface_temp_data = Array(surf_obs_data["T_sfc"]) # (8112, )
-surface_pressure_data = Array(ECMWF_data["psurf"])[169:end]
-temp_data = Array(ECMWF_data["T"])[:, 169:end]
 lhf_data = Array(surf_obs_data["hl"]) # (8112, )
 shf_data = Array(surf_obs_data["hs"]) # (8112, )
 z0m_data = Array(ECMWF_data["surf-roughness-length"])[169:end] # (8112, )
 z0b_data = Array(ECMWF_data["surface-roughness-length-heat"])[169:end] # (8112, )
-p_data = Array(ECMWF_data["p"])[:, 169:end]
+surface_pressure_data = Array(ECMWF_data["psurf"])[169:end] # (8112, )
+
+# profiles
+u_data = Array(EC_data["u"])[end:-1:1, 169:end]
+v_data = Array(EC_data["v"])[end:-1:1, 169:end]
+qv = Array(ECMWF_data["qv"])[end:-1:1, 169:end]
+ql = Array(ECMWF_data["ql"])[end:-1:1, 169:end]
+qi = Array(ECMWF_data["qi"])[end:-1:1, 169:end]
+temp_data = Array(ECMWF_data["T"])[end:-1:1, 169:end]
+p_data = Array(ECMWF_data["p"])[end:-1:1, 169:end]
 qt_data = qv .+ ql .+ qi # (31, 8112)
 
 Z, T = size(u_data) # extract dimensions for easier indexing
@@ -64,24 +68,62 @@ for i in 1:Z
     u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
 end
 
+#=
+SUMMARY OF MISSING DATA:
+- surface_temp_data
+- lhf, shf - ignore for now since we will try ValuesOnly
+- u_star_data
+=#
+poor_data = BitArray(undef, T)
+for i in 1:T
+    if (surface_temp_data[i] == 999.0 || surface_temp_data[i] == 9999.0 || u_star_data[i] == 9999.0)
+        poor_data[i] = 1
+    end
+end
 
+time_data = time_data[.!poor_data]
+u_star_data = u_star_data[.!poor_data]
+surface_temp_data = surface_temp_data[.!poor_data]
+surface_pressure_data = surface_pressure_data[.!poor_data]
+lhf_data = lhf_data[.!poor_data]
+shf_data = shf_data[.!poor_data]
+z0m_data = z0m_data[.!poor_data]
+z0b_data = z0b_data[.!poor_data]
 
+function filter_matrix(data)
+    temp = zeros(Z, length(time_data))
+    for i in 1:Z
+        temp[i, :] = data[i, :][.!poor_data]
+    end
+    return temp
+end
 
+u_data = filter_matrix(u_data)
+qt_data = filter_matrix(qt_data)
+temp_data = filter_matrix(temp_data)
+p_data = filter_matrix(p_data)
 
+Z, T = size(u_data)
 
-# overrides = (;)
-# thermo_params, surf_flux_params = get_surf_flux_params(overrides)
+thermo_defaults = get_thermodynamic_defaults()
+R = filter((pair)->pair.first == :gas_constant, thermo_defaults)[1].second
+M = filter((pair)->pair.first == :molmass_dryair, thermo_defaults)[1].second
+g = filter((pair)->pair.first == :grav, thermo_defaults)[1].second
+P_0 = 100000
+c_p = 1000
 
-# heatmap(temp_data,
-#     c=cgrad([:blue, :white,:red, :yellow]),
-#     xlabel="Time", ylabel="Level",)
-# png("test_plot")
+# θ_data = zeros(Z, T)
+# for i in 1:Z
+#     θ_data[i, :] = temp_data[i, :] .* (P_0 ./ p_data[i, :]) .^ (R / c_p)
+# end
 
-# M = 28
-# R = 0.287
-# g = 9.81
+# TODO: calculate virtual temperature
+
 # T0 = surface_pressure_data .+ 273
-# z_data = zeros(Z)
+z_data = zeros(Z, T)
+for i in 1:Z
+    z_data[i, :] = temp_data[i, :] * R / g .* log.(surface_pressure_data ./ p_data[i, :])
+end
 # for j in 1:T
 #     global z_data
 #     temp = log.(p_data[:, j] ./ surface_pressure_data[j])
@@ -136,8 +178,10 @@ function physical_model(parameters, inputs)
             z0m = z0m_data[j]
             z0b = z0b_data[j]
             gustiness = FT(1)
-            kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
-            sc = SF.Fluxes{FT}(; kwargs...)
+            # kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
+            # sc = SF.Fluxes{FT}(; kwargs...)
+            kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
+            sc = SF.ValuesOnly{FT}(; kwargs...)
 
             try
                 sf = SF.surface_conditions(surf_flux_params, sc, soltype=RS.VerboseSolution())
