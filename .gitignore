@@ -1,5 +1,5 @@
 data/
-*.png
+images/
 .DS_STORE
 *.toml
 test.jl
