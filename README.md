@@ -26,7 +26,7 @@ $$
 The right side of the equation is taken to be the observable, with values of u, u*, z, and z0m given by LES data. The model in this scenario is the Businger psi function in the SurfaceFluxes package. Once this file is run, relevant plots are generated in the images/psi folder. This file also has concurrent issues, see the issues section.
 
 ### `SHEBA_calibration.jl`
-The last high priority file is `SHEBA_calibration.jl`, which uses the same pipeline as that in `businger_calibration.jl` to tune the parameters a\_m, a\_h, b\_m, and b\_h but with SHEBA data instead of LES data. Because the data collection was imperfect, the fields u_star, latent heat flux, sensible heat flux, and surface temperature have missing values. At the timesteps where these fields are missing values, I filter out the data so that all the data we are working with is valid. Because the dataset did not explicitly provide data for the heights at which observations were drawn from, I derived the heights through the hypsometric equation. This file has concurrent issues, see the issues section.
+The last high priority file is `SHEBA_calibration.jl`, which uses the same pipeline as that in `businger_calibration.jl` to tune the parameters a\_m, a\_h, b\_m, and b\_h but with SHEBA data instead of LES data. Because the data collection was imperfect, the fields u_star, latent heat flux, sensible heat flux, and surface temperature have missing values. At the timesteps where these fields are missing values, I filter out the data so that all the data we are working with is valid. Because the dataset did not explicitly provide data for the heights at which observations were drawn from, I derived the heights through the hypsometric equation. These derived heights are not accurate. This file has concurrent issues, see the issues section.
 
 ### `plot_LMO.jl`
 There also exists a file, `plot_LMO.jl`. This file plots the L_MO calculated through surface conditions given LES data versus the L_MO provided by the dataset. It generates 4 plots, all of which display the calculated L_MO versus the data's L_MO, but differ in implementation slightly.
@@ -69,4 +69,4 @@ When we plot the model truth (the Businger psi equation given true parameters) v
 ![See plot: ](assets/y_versus_model_truth.png)
 
 ### `SHEBA_calibration.jl`
-This file is experiencing large amounts of unconverged fluxes.
+This file is experiencing large amounts of unconverged fluxes. This is likely due to the inaccurate derived heights.
