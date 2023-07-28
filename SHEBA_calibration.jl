@@ -76,14 +76,14 @@ SUMMARY OF MISSING DATA:
 =#
 poor_data = BitArray(undef, T)
 for i in 1:T
-    if (surface_temp_data[i] == 999.0 || surface_temp_data[i] == 9999.0 || u_star_data[i] == 9999.0)
+    if (surface_temp_data[i] == 999.0 || surface_temp_data[i] == 9999.0 || u_star_data[i] == 9999.0 || lhf_data[i] == 9999.0 || shf_data[i] == 9999.0)
         poor_data[i] = 1
     end
 end
 
 time_data = time_data[.!poor_data]
 u_star_data = u_star_data[.!poor_data]
-surface_temp_data = surface_temp_data[.!poor_data]
+surface_temp_data = surface_temp_data[.!poor_data] .+ 273.15
 surface_pressure_data = surface_pressure_data[.!poor_data]
 lhf_data = lhf_data[.!poor_data]
 shf_data = shf_data[.!poor_data]
@@ -124,28 +124,6 @@ z_data = zeros(Z, T)
 for i in 1:Z
     z_data[i, :] = temp_data[i, :] * R / g .* log.(surface_pressure_data ./ p_data[i, :])
 end
-# for j in 1:T
-#     global z_data
-#     temp = log.(p_data[:, j] ./ surface_pressure_data[j])
-#     temp *= -R * T0[j] / (g * M)
-#     z_data = z_data .+ temp
-# end
-# z_data /= T
-
-# ρ_data = zeros(Z, T)
-# for j in 1:T
-#     for i in 1:Z
-#         ts = TD.PhaseEquil_pTq(thermo_params, p_data[i, j], temp_data[i, j], qt_data[i, j])
-#         ρ_data[i, j] = air_density(thermo_params, ts)
-#     end
-# end
-
-# z_data = zeros(Z)
-# for j in 1:T
-#     temp_data = (p_data[:, j] .- surface_pressure_data[j]) ./ (ρ_data[:, j] .* 9.81)
-#     z_data = z_data .+ temp_data
-# end
-# z_data /= T
 
 unconverged_data = Dict{Tuple{FT, FT}, Int64}()
 unconverged_z = Dict{FT, Int64}()
@@ -169,7 +147,7 @@ function physical_model(parameters, inputs)
         for i in 1:Z
             u_in = u[i, j]
             v_in = FT(0)
-            z_in = z[i]
+            z_in = z[i, j]
             u_in = SVector{2, FT}(u_in, v_in)
 
             ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i, j], temp_data[i, j], qt_data[i, j])
@@ -178,13 +156,13 @@ function physical_model(parameters, inputs)
             z0m = z0m_data[j]
             z0b = z0b_data[j]
             gustiness = FT(1)
-            # kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
-            # sc = SF.Fluxes{FT}(; kwargs...)
-            kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
-            sc = SF.ValuesOnly{FT}(; kwargs...)
+            kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
+            sc = SF.Fluxes{FT}(; kwargs...)
+            # kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
+            # sc = SF.ValuesOnly{FT}(; kwargs...)
 
             try
-                sf = SF.surface_conditions(surf_flux_params, sc, soltype=RS.VerboseSolution())
+                sf = SF.surface_conditions(surf_flux_params, sc)
                 u_star_sum += sf.ustar
                 total += 1
             catch e
@@ -212,9 +190,17 @@ end
 
 inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0m_data = z0m_data, z0b_data = z0b_data)
 
-Γ = 0.00005 * I
-η_dist = MvNormal(zeros(length(u_star_data)), Γ)
-y = u_star_data .+ rand(η_dist) # (H ⊙ Ψ ⊙ T^{-1})(θ) + η from Cleary et al 2021
+# The observation data is noisy by default, and we estimate the noise by calculating variance from mean
+# May be an overestimate of noise, but that is ok.
+variance = 0.0
+for u_star in u_star_data
+    global variance
+    variance += (mean(u_star_data) - u_star) * (mean(u_star_data) - u_star)
+end
+variance /= T
+
+Γ = variance * I
+y = u_star_data
 
 prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
 prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
