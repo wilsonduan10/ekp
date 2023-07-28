@@ -1,18 +1,7 @@
 using LinearAlgebra, Random
 using Distributions, Plots
-using EnsembleKalmanProcesses
-using EnsembleKalmanProcesses.ParameterDistributions
-const EKP = EnsembleKalmanProcesses
-
 using Downloads
 using NCDatasets
-
-using CLIMAParameters
-const CP = CLIMAParameters
-FT = Float64
-
-import RootSolvers
-const RS = RootSolvers
 
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
 mkpath(joinpath(@__DIR__, "images"))

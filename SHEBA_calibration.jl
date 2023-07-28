@@ -47,7 +47,7 @@ v_data = Array(EC_data["v"])[:, 169:end]
 qv = Array(ECMWF_data["qv"])[:, 169:end]
 ql = Array(ECMWF_data["ql"])[:, 169:end]
 qi = Array(ECMWF_data["qi"])[:, 169:end]
-surface_temperature_data = Array(surf_obs_data["T_sfc"]) # (8112, )
+surface_temp_data = Array(surf_obs_data["T_sfc"]) # (8112, )
 surface_pressure_data = Array(ECMWF_data["psurf"])[169:end]
 temp_data = Array(ECMWF_data["T"])[:, 169:end]
 lhf_data = Array(surf_obs_data["hl"]) # (8112, )
@@ -57,13 +57,6 @@ z0b_data = Array(ECMWF_data["surface-roughness-length-heat"])[169:end] # (8112, 
 p_data = Array(ECMWF_data["p"])[:, 169:end]
 qt_data = qv .+ ql .+ qi # (31, 8112)
 
-# CAREFUL WITH SURFACE TEMPERATURE LOTS OF VALUES ARE 9999.0
-for i in 1:length(surface_temperature_data)
-    if (surface_temperature_data[i] > 99)
-        surface_temperature_data[i] = 0
-    end
-end
-
 Z, T = size(u_data) # extract dimensions for easier indexing
 
 # We combine the u and v velocities into a single number to facilitate analysis: u = √u^2 + v^2
@@ -71,21 +64,31 @@ for i in 1:Z
     u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
 end
 
-overrides = (;)
-thermo_params, surf_flux_params = get_surf_flux_params(overrides)
 
 
-M = 28
-R = 0.287
-g = 9.81
-T0 = surface_pressure_data .+ 273
-z_data = zeros(Z)
-for j in 1:T
-    temp = log.(p_data[:, j] ./ surface_pressure_data[j])
-    temp *= -R * T0[j] / (g * M)
-    z_data = z_data .+ temp
-end
-z_data /= T
+
+
+
+# overrides = (;)
+# thermo_params, surf_flux_params = get_surf_flux_params(overrides)
+
+# heatmap(temp_data,
+#     c=cgrad([:blue, :white,:red, :yellow]),
+#     xlabel="Time", ylabel="Level",)
+# png("test_plot")
+
+# M = 28
+# R = 0.287
+# g = 9.81
+# T0 = surface_pressure_data .+ 273
+# z_data = zeros(Z)
+# for j in 1:T
+#     global z_data
+#     temp = log.(p_data[:, j] ./ surface_pressure_data[j])
+#     temp *= -R * T0[j] / (g * M)
+#     z_data = z_data .+ temp
+# end
+# z_data /= T
 
 # ρ_data = zeros(Z, T)
 # for j in 1:T
@@ -117,7 +120,7 @@ function physical_model(parameters, inputs)
     for j in 1:T # 865
         u_star_sum = 0.0
         total = 0
-        ts_sfc = TD.PhaseEquil_pTq(thermo_params, surface_pressure_data[j], surface_temperature_data[j], qt_data[1, j]) # use 1 to get surface conditions
+        ts_sfc = TD.PhaseEquil_pTq(thermo_params, surface_pressure_data[j], surface_temp_data[j], qt_data[1, j]) # use 1 to get surface conditions
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 

@@ -3,3 +3,4 @@ images/
 .DS_STORE
 *.toml
 test.jl
+*.png
