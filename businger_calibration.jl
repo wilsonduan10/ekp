@@ -74,12 +74,25 @@ unconverged_data = Dict{Tuple{FT, FT}, Int64}()
 unconverged_z = Dict{FT, Int64}()
 unconverged_t = Dict{FT, Int64}()
 
+function get_u(u_star, parameters, inputs)
+    nothing
+end
+
+function get_θ()
+end
+
+function get_q()
+end
+
+function get_E()
+end
+
 # We define our physical model. It takes in the parameters a\_m, a\_h, b\_m, b\_h, as well as data
 # inputs. It establishes thermodynamic parameters and Businger parameters in order to call the 
 # function surface_conditions. We store each time step's u_star and return a list of these u_stars.
 function physical_model(parameters, inputs)
     a_m, a_h, b_m, b_h = parameters
-    (; u, z, time, lhf, shf, z0) = inputs
+    (; u, z, time, lhf, shf, z0, κ) = inputs
 
     overrides = (; a_m, a_h, b_m, b_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides) # override default Businger params
@@ -145,7 +158,7 @@ function G(parameters, inputs)
 end
 
 # Define inputs based on data, to be fed into the physical model.
-inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
+inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001, κ = 0.4)
 
 # The observation data is noisy by default, and we estimate the noise by calculating variance from mean
 # May be an overestimate of noise, but that is ok.

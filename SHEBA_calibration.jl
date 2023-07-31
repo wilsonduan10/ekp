@@ -106,23 +106,33 @@ p_data = filter_matrix(p_data)
 Z, T = size(u_data)
 
 thermo_defaults = get_thermodynamic_defaults()
+thermo_params = TD.Parameters.ThermodynamicsParameters{FT}(; thermo_defaults...)
 R = filter((pair)->pair.first == :gas_constant, thermo_defaults)[1].second
 M = filter((pair)->pair.first == :molmass_dryair, thermo_defaults)[1].second
 g = filter((pair)->pair.first == :grav, thermo_defaults)[1].second
 P_0 = 100000
 c_p = 1000
 
-# θ_data = zeros(Z, T)
-# for i in 1:Z
-#     θ_data[i, :] = temp_data[i, :] .* (P_0 ./ p_data[i, :]) .^ (R / c_p)
-# end
+ρ_data = zeros(Z, T)
+for j in 1:T
+    for i in 1:Z
+        ts = TD.PhaseEquil_pTq(thermo_params, p_data[i, j], temp_data[i, j], qt_data[i, j])
+        ρ_data[i, j] = TD.air_density(thermo_params, ts)
+    end
+end
 
-# TODO: calculate virtual temperature
+# calculate virtual temperature
+virt_temp_data = zeros(Z, T)
+for i in 1:Z
+    for j in 1:T
+        virt_temp_data[i, j] = TD.virtual_temperature(thermo_params, temp_data[i, j], ρ_data[i, j])
+    end
+end
 
-# T0 = surface_pressure_data .+ 273
+# calculate z given other metrics
 z_data = zeros(Z, T)
 for i in 1:Z
-    z_data[i, :] = temp_data[i, :] * R / g .* log.(surface_pressure_data ./ p_data[i, :])
+    z_data[i, :] = virt_temp_data[i, :] * R / g .* log.(surface_pressure_data ./ p_data[i, :])
 end
 
 unconverged_data = Dict{Tuple{FT, FT}, Int64}()
