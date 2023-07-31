@@ -34,17 +34,19 @@ localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
 # We extract the relevant data points for our pipeline.
+max_z_index = 200
+
 time_data = Array(data.group["timeseries"]["t"]) # (865, )
-z_data = Array(data.group["profiles"]["z"]) # (200, )
+z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
-u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
-v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
-ρ_data = Array(data.group["reference"]["rho0"]) # (200, )
-qt_data = Array(data.group["profiles"]["qt_min"]) # (200, 865)
-θ_li_data = Array(data.group["profiles"]["thetali_mean"]) # (200, 865)
-p_data = Array(data.group["reference"]["p0"]) # (200, )
-surface_temp_data = Array(data.group["timeseries"]["surface_temperature"])
-temp_data = Array(data.group["profiles"]["temperature_mean"]) # (200, 865)
+u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, :] # (200, 865)
+v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, :] # (200, 865)
+ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index] # (200, )
+qt_data = Array(data.group["profiles"]["qt_min"])[1:max_z_index, :] # (200, 865)
+θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, :] # (200, 865)
+p_data = Array(data.group["reference"]["p0"])[1:max_z_index] # (200, )
+surface_temp_data = Array(data.group["timeseries"]["surface_temperature"]) # (865, )
+temp_data = Array(data.group["profiles"]["temperature_mean"])[1:max_z_index, :] # (200, 865)
 lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
 shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 lmo_data = Array(data.group["timeseries"]["obukhov_length_mean"]) # (865, )
@@ -138,27 +140,20 @@ end
 
 ENV["GKSwstype"] = "nul"
 theta_true = (4.7, 4.7, 15.0, 9.0)
-most_inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data)
-z0s = [0.0001]
+inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
 # Generate plots with ρθq = true
 # plot with Fluxes
 plot(time_data, lmo_data, c=:black, label="Data L_MO", legend=:bottomright)
-for i in 1:length(z0s)
-    custom_input = (; most_inputs..., z0 = z0s[i])
-    output = get_LMO(theta_true, custom_input, true, true)
-    plot!(time_data, output, label="z0 = " * string(z0s[i]), seriestype=:scatter, ms=1.5)
-end
+plot!(time_data, get_LMO(theta_true, inputs, true, true), label="Model L_MO", seriestype=:scatter, ms=1.5)
+title!("Fluxes and ρθq Scheme")
 xlabel!("Time")
 ylabel!("L_MO")
 png("images/L_MO_images/fluxes_1")
 
 # plot with ValuesOnly
 plot(time_data, lmo_data, c=:black, label="Data L_MO", legend=:bottomright)
-for i in 1:length(z0s)
-    custom_input = (; most_inputs..., z0 = z0s[i])
-    output = get_LMO(theta_true, custom_input, false, true)
-    plot!(time_data, output, label="z0 = " * string(z0s[i]), seriestype=:scatter, ms=1.5)
-end
+plot!(time_data, get_LMO(theta_true, inputs, false, true), label="Model L_MO", seriestype=:scatter, ms=1.5)
+title!("ValuesOnly and ρθq Scheme")
 xlabel!("Time")
 ylabel!("L_MO")
 png("images/L_MO_images/values_only_1")
@@ -166,22 +161,16 @@ png("images/L_MO_images/values_only_1")
 # Generate plots with ρθq = false
 # plot with Fluxes
 plot(time_data, lmo_data, c=:black, label="Data L_MO", legend=:bottomright)
-for i in 1:length(z0s)
-    custom_input = (; most_inputs..., z0 = z0s[i])
-    output = get_LMO(theta_true, custom_input, true, false)
-    plot!(time_data, output, label="z0 = " * string(z0s[i]), seriestype=:scatter, ms=1.5)
-end
+plot!(time_data, get_LMO(theta_true, inputs, true, false), label="Model L_MO", seriestype=:scatter, ms=1.5)
+title!("Fluxes and pTq Scheme")
 xlabel!("Time")
 ylabel!("L_MO")
 png("images/L_MO_images/fluxes_2")
 
 # plot with ValuesOnly
 plot(time_data, lmo_data, c=:black, label="Data L_MO", legend=:bottomright)
-for i in 1:length(z0s)
-    custom_input = (; most_inputs..., z0 = z0s[i])
-    output = get_LMO(theta_true, custom_input, false, false)
-    plot!(time_data, output, label="z0 = " * string(z0s[i]), seriestype=:scatter, ms=1.5)
-end
+plot!(time_data, get_LMO(theta_true, inputs, false, false), label="Model L_MO", seriestype=:scatter, ms=1.5)
+title!("ValuesOnly and pTq Scheme")
 xlabel!("Time")
 ylabel!("L_MO")
 png("images/L_MO_images/values_only_2")

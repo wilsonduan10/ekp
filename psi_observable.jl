@@ -28,7 +28,7 @@ localfile = "data/Stats.cfsite23_CNRM-CM5_amip_2004-2008.01.nc"
 data = NCDataset(localfile);
 
 # Extract data
-max_z_index = 10
+max_z_index = 20
 
 time_data = Array(data.group["timeseries"]["t"]) # (865, )
 z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )

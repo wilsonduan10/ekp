@@ -42,20 +42,22 @@ include("helper/graph.jl")
 # We must first download the netCDF datasets and place them into the data/ directory. We have the option to choose
 # the cfsite and the month where data is taken from, as long as the data has been downloaded.
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-cfsite = 13
-month = "07"
+cfsite = 23
+month = "01"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
 # We extract the relevant data points for our pipeline.
+max_z_index = 20
+
 time_data = Array(data.group["timeseries"]["t"]) # (865, )
-z_data = Array(data.group["profiles"]["z"]) # (200, )
+z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
-u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
-v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
-ρ_data = Array(data.group["reference"]["rho0"]) # (200, )
-qt_data = Array(data.group["profiles"]["qt_min"]) # (200, 865)
-θ_li_data = Array(data.group["profiles"]["thetali_mean"]) # (200, 865)
+u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, :] # (200, 865)
+v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, :] # (200, 865)
+ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index] # (200, )
+qt_data = Array(data.group["profiles"]["qt_min"])[1:max_z_index, :] # (200, 865)
+θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, :] # (200, 865)
 lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
 shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 
