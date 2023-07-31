@@ -74,19 +74,6 @@ unconverged_data = Dict{Tuple{FT, FT}, Int64}()
 unconverged_z = Dict{FT, Int64}()
 unconverged_t = Dict{FT, Int64}()
 
-function get_u(u_star, parameters, inputs)
-    nothing
-end
-
-function get_θ()
-end
-
-function get_q()
-end
-
-function get_E()
-end
-
 # We define our physical model. It takes in the parameters a\_m, a\_h, b\_m, b\_h, as well as data
 # inputs. It establishes thermodynamic parameters and Businger parameters in order to call the 
 # function surface_conditions. We store each time step's u_star and return a list of these u_stars.
