@@ -28,11 +28,13 @@ localfile = "data/Stats.cfsite23_CNRM-CM5_amip_2004-2008.01.nc"
 data = NCDataset(localfile);
 
 # Extract data
+max_z_index = 10
+
 time_data = Array(data.group["timeseries"]["t"]) # (865, )
-z_data = Array(data.group["profiles"]["z"]) # (200, )
+z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
-u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
-v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
+u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, :] # (200, 865)
+v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, :] # (200, 865)
 lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
 shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 L_MO_data = Array(data.group["timeseries"]["obukhov_length_mean"]) # (865, )
@@ -117,12 +119,12 @@ plot(ζ_data, y, label="y", c=:green)
 plot!(ζ_data, model_truth, label="Model Truth", c=:black)
 xlabel!("ζ")
 ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
-png("images/psi/y versus model truth")
+png("images/psi/y_versus_model_truth")
 
 # plot all
 plot(ζ_data, y, label="y", c=:green)
 plot!(ζ_data, model_truth, label="Model Truth", c=:black)
-initial = [model(initial_ensemble[:, i], inputs) for i in 1:N_ensemble]
+initial = [model(constrained_initial_ensemble[:, i], inputs) for i in 1:N_ensemble]
 final = [model(final_ensemble[:, i], inputs) for i in 1:N_ensemble]
 initial_label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
 final_label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
@@ -130,7 +132,7 @@ plot!(ζ_data, initial, label=initial_label, c=:red)
 plot!(ζ_data, final, label=final_label, c=:blue)
 xlabel!("ζ")
 ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
-png("images/psi/ensembles vs data")
+png("images/psi/ensembles_vs_data")
 
 # We print the mean parameters of the initial and final ensemble to identify how
 # the parameters evolved to fit the dataset. 
