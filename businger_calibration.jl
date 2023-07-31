@@ -116,7 +116,7 @@ function physical_model(parameters, inputs)
             # Now, we call surface_conditions and store the calculated ustar. We surround it in a try catch
             # to account for unconverged fluxes.
             try
-                sf = SF.surface_conditions(surf_flux_params, sc, soltype=RS.VerboseSolution())
+                sf = SF.surface_conditions(surf_flux_params, sc)
                 u_star_sum += sf.ustar
                 total += 1
             catch e
