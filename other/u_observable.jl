@@ -1,4 +1,4 @@
-# Using LHF as an observable
+# Using u as an observable
 # Imports
 using LinearAlgebra, Random
 using Distributions, Plots
