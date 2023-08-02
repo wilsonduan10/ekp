@@ -26,7 +26,7 @@ include("helper/setup_parameter_set.jl")
 
 ENV["GKSwstype"] = "nul"
 mkpath(joinpath(@__DIR__, "images"))
-mkpath(joinpath(@__DIR__, "images/functional_learning"))
+mkpath(joinpath(@__DIR__, "images/function_learning"))
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
 localfile = "data/Stats.cfsite23_CNRM-CM5_amip_2004-2008.01.nc"
 data = NCDataset(localfile)
@@ -112,23 +112,31 @@ plot()
 for i in 1:5
     plot!(ζ_data, constrained_initial_ensemble[:, i])
 end
-png("images/functional_learning/initial_ensembles")
+xlabel!("ζ")
+ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
+png("images/function_learning/initial_ensembles")
 
 # plot first 5 final ensembles
 plot()
 for i in 1:5
     plot!(ζ_data, final_ensemble[:, i])
 end
-png("images/functional_learning/final_ensembles")
+xlabel!("ζ")
+ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
+png("images/function_learning/final_ensembles")
 
 # plot mean initial ensemble vs y
 plot(ζ_data, vec(mean(constrained_initial_ensemble, dims=2)))
 plot!(ζ_data, y)
-png("images/functional_learning/y_vs_initial_ensemble")
+xlabel!("ζ")
+ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
+png("images/function_learning/y_vs_initial_ensemble")
 
 # plot mean final ensemble vs y
 plot(ζ_data, vec(mean(final_ensemble, dims=2)))
 plot!(ζ_data, y)
-png("images/functional_learning/y_vs_final_ensemble")
+xlabel!("ζ")
+ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
+png("images/function_learning/y_vs_final_ensemble")
 
-println("Stored plots in images/functional_learning")
+println("Stored plots in images/function_learning")
