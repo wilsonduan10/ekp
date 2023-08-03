@@ -26,15 +26,22 @@ using StaticArrays: SVector
 include("helper/setup_parameter_set.jl")
 
 mkpath(joinpath(@__DIR__, "images"))
-mkpath(joinpath(@__DIR__, "images/L_MO_images"))
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-cfsite = 10
-month = "07"
+cfsite = 23
+month = "01"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
+mkpath(joinpath(@__DIR__, "images/L_MO_$(cfsite)_$(month)"))
 
 # We extract the relevant data points for our pipeline.
-max_z_index = 200
+max_z_index = 5
+
+if (max_z_index == 200)
+    output_filepath = "images/L_MO_$(cfsite)_$(month)/full"
+else
+    output_filepath = "images/L_MO_$(cfsite)_$(month)/partial"
+end
+mkpath(joinpath(@__DIR__, output_filepath))
 
 time_data = Array(data.group["timeseries"]["t"]) # (865, )
 z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
@@ -148,7 +155,7 @@ plot!(time_data, get_LMO(theta_true, inputs, true, true), label="Model L_MO", se
 title!("Fluxes and ρθq Scheme")
 xlabel!("Time")
 ylabel!("L_MO")
-png("images/L_MO_images/fluxes_1")
+png("$(output_filepath)/fluxes_1")
 
 # plot with ValuesOnly
 plot(time_data, lmo_data, c=:black, label="Data L_MO", legend=:bottomright)
@@ -156,7 +163,7 @@ plot!(time_data, get_LMO(theta_true, inputs, false, true), label="Model L_MO", s
 title!("ValuesOnly and ρθq Scheme")
 xlabel!("Time")
 ylabel!("L_MO")
-png("images/L_MO_images/values_only_1")
+png("$(output_filepath)/values_only_1")
 
 # Generate plots with ρθq = false
 # plot with Fluxes
@@ -165,7 +172,7 @@ plot!(time_data, get_LMO(theta_true, inputs, true, false), label="Model L_MO", s
 title!("Fluxes and pTq Scheme")
 xlabel!("Time")
 ylabel!("L_MO")
-png("images/L_MO_images/fluxes_2")
+png("$(output_filepath)/fluxes_2")
 
 # plot with ValuesOnly
 plot(time_data, lmo_data, c=:black, label="Data L_MO", legend=:bottomright)
@@ -173,4 +180,4 @@ plot!(time_data, get_LMO(theta_true, inputs, false, false), label="Model L_MO", 
 title!("ValuesOnly and pTq Scheme")
 xlabel!("Time")
 ylabel!("L_MO")
-png("images/L_MO_images/values_only_2")
+png("$(output_filepath)/values_only_2")

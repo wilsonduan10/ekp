@@ -17,8 +17,8 @@ using StaticArrays: SVector
 include("../helper/setup_parameter_set.jl")
 
 mkpath(joinpath(@__DIR__, "../data")) # create data folder if not exists
-cfsite = 23
-month = "01"
+cfsite = 10
+month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 mkpath(joinpath(@__DIR__, "../images/observables_$(cfsite)_$(month)"))
 data = NCDataset(localfile)
@@ -42,7 +42,6 @@ shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 uw_data = Array(data.group["timeseries"]["uw_surface_mean"]) # (865, )
 vw_data = Array(data.group["timeseries"]["vw_surface_mean"]) # (865, )
 buoyancy_flux_data = Array(data.group["timeseries"]["buoyancy_flux_surface_mean"]) # (865, )
-lmo_data = Array(data.group["timeseries"]["obukhov_length_mean"]) # (865, )
 
 Z, T = size(u_data) # extract dimensions for easier indexing
 
@@ -68,9 +67,8 @@ function physical_model(parameters, inputs, pTq = false)
     buoy_output = zeros(T)
     tau_output = zeros(T)
     evaporation_output = zeros(T)
-    L_MO_output = zeros(T)
     for j in 1:T # 865
-        sums = zeros(7) # for 7 outputs
+        sums = zeros(6) # for 7 outputs
         total = 0
         if (pTq)
             ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
@@ -112,7 +110,6 @@ function physical_model(parameters, inputs, pTq = false)
                 sums[4] += sf.buoy_flux
                 sums[5] += sf.ρτxz
                 sums[6] += sf.evaporation
-                sums[7] += sf.L_MO
                 total += 1
             catch e
                 println(e)
@@ -129,15 +126,14 @@ function physical_model(parameters, inputs, pTq = false)
         buoy_output[j] = sums[4] / total
         tau_output[j] = sums[5] / total
         evaporation_output[j] = sums[6] / total
-        L_MO_output[j] = sums[7] / total
     end
-    return (u_star_output, shf_output, lhf_output, buoy_output, tau_output, evaporation_output, L_MO_output)
+    return (u_star_output, shf_output, lhf_output, buoy_output, tau_output, evaporation_output)
 end
 
 inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
 theta_true = (4.7, 4.7, 15.0, 9.0)
-u_star_model, shf_model, lhf_model, buoy_model, tau_model, evaporation_model, L_MO_model = physical_model(theta_true, inputs)
-u_star_model2, shf_model2, lhf_model2, buoy_model2, tau_model2, evaporation_model2, L_MO_model2 = physical_model(theta_true, inputs, true)
+u_star_model, shf_model, lhf_model, buoy_model, tau_model, evaporation_model = physical_model(theta_true, inputs)
+u_star_model2, shf_model2, lhf_model2, buoy_model2, tau_model2, evaporation_model2 = physical_model(theta_true, inputs, true)
 
 
 function generate_plot(y, model_truth, model_truth_pTq, name)
@@ -158,9 +154,8 @@ end
 
 generate_plot(u_star_data, u_star_model, u_star_model2, "u_star")
 generate_plot(shf_data, shf_model, shf_model2, "shf")
-generate_plot(lhf_data, u_star_model, u_star_model2, "lhf")
-generate_plot(buoyancy_flux_data, u_star_model, u_star_model2, "buoyancy_flux")
+generate_plot(lhf_data, lhf_model, lhf_model2, "lhf")
+generate_plot(buoyancy_flux_data, buoy_model, buoy_model2, "buoyancy_flux")
 generate_plot(τ_data, tau_model, tau_model2, "τ")
 generate_plot(vec(mean(qt_data, dims=1)), evaporation_model, evaporation_model2, "evaporation")
-generate_plot(lmo_data, L_MO_model, L_MO_model2, "L_MO")
 println("Plots generated in folder: images/observables_$(cfsite)_$(month)")
