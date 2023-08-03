@@ -1,20 +1,11 @@
-# Using qt as an observable
-# Imports
 using LinearAlgebra, Random
 using Distributions, Plots
-using EnsembleKalmanProcesses
-using EnsembleKalmanProcesses.ParameterDistributions
-const EKP = EnsembleKalmanProcesses
-
 using Downloads
 using NCDatasets
 
 using CLIMAParameters
 const CP = CLIMAParameters
 FT = Float64
-
-import RootSolvers
-const RS = RootSolvers
 
 import SurfaceFluxes as SF
 import Thermodynamics as TD
@@ -26,10 +17,10 @@ using StaticArrays: SVector
 include("../helper/setup_parameter_set.jl")
 
 mkpath(joinpath(@__DIR__, "../data")) # create data folder if not exists
-mkpath(joinpath(@__DIR__, "../images/q_observable"))
 cfsite = 23
 month = "01"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
+mkpath(joinpath(@__DIR__, "../images/observables_$(cfsite)_$(month)"))
 data = NCDataset(localfile)
 
 # We extract the relevant data points for our pipeline.
@@ -39,6 +30,7 @@ time_data = Array(data.group["timeseries"]["t"]) # (865, )
 z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
 u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, :] # (200, 865)
 v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, :] # (200, 865)
+u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
 ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index] # (200, )
 qt_data = Array(data.group["profiles"]["qt_min"])[1:max_z_index, :] # (200, 865)
 p_data = Array(data.group["reference"]["p0"])[1:max_z_index] # (200, )
@@ -50,7 +42,7 @@ shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 uw_data = Array(data.group["timeseries"]["uw_surface_mean"]) # (865, )
 vw_data = Array(data.group["timeseries"]["vw_surface_mean"]) # (865, )
 buoyancy_flux_data = Array(data.group["timeseries"]["buoyancy_flux_surface_mean"]) # (865, )
-E_data = Array(data.group["profiles"]["qt_flux_z"])[1:max_z_index, :]
+lmo_data = Array(data.group["timeseries"]["obukhov_length_mean"]) # (865, )
 
 Z, T = size(u_data) # extract dimensions for easier indexing
 
@@ -60,28 +52,33 @@ for i in 1:Z
     uw_data[i] = sqrt(uw_data[i] * uw_data[i] + vw_data[i] * vw_data[i])
 end
 
-# Because the model sometimes fails to converge, we store unconverged values in a dictionary
-# so we can analyze and uncover the cause of failure.
-unconverged_data = Dict{Tuple{FT, FT}, Int64}()
-unconverged_z = Dict{FT, Int64}()
-unconverged_t = Dict{FT, Int64}()
+ρ_m = mean(ρ_data[1, :])
+τ_data = -ρ_m .* uw_data
 
-# We define our physical model. It takes in the parameters a\_m, a\_h, b\_m, b\_h, as well as data
-# inputs. It establishes thermodynamic parameters and Businger parameters in order to call the 
-# function surface_conditions
-function physical_model(parameters, inputs)
+function physical_model(parameters, inputs, pTq = false)
     a_m, a_h, b_m, b_h = parameters
     (; u, z, time, lhf, shf, z0) = inputs
 
     overrides = (; a_m, a_h, b_m, b_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides) # override default Businger params
 
-    output = zeros(Z, T)
+    u_star_output = zeros(T)
+    shf_output = zeros(T)
+    lhf_output = zeros(T)
+    buoy_output = zeros(T)
+    tau_output = zeros(T)
+    evaporation_output = zeros(T)
+    L_MO_output = zeros(T)
     for j in 1:T # 865
-        ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
-        # ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
-        # ρ_sfc = TD.air_density(thermo_params, ts_sfc)
-        # ρ_sfc = ρ_data[1]
+        sums = zeros(7) # for 7 outputs
+        total = 0
+        if (pTq)
+            ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
+            ρ_sfc = TD.air_density(thermo_params, ts_sfc)
+        else 
+            ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
+            ρ_sfc = ρ_data[1]
+        end
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
@@ -92,22 +89,33 @@ function physical_model(parameters, inputs)
             z_in = z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             
-            ts_in = TD.PhaseEquil_ρTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
-            # ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
+            if (pTq)
+                ts_in = TD.PhaseEquil_ρTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
+            else
+                ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
+            end
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions
             z0m = z0b = z0
             gustiness = FT(1)
+            # kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
+            # sc = SF.Fluxes{FT}(; kwargs...)
             kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
             sc = SF.ValuesOnly{FT}(; kwargs...)
 
             try
                 sf = SF.surface_conditions(surf_flux_params, sc)
-                output[i, j] = sf.evaporation
+                sums[1] += sf.ustar
+                sums[2] += sf.shf
+                sums[3] += sf.lhf
+                sums[4] += sf.buoy_flux
+                sums[5] += sf.ρτxz
+                sums[6] += sf.evaporation
+                sums[7] += sf.L_MO
+                total += 1
             catch e
                 println(e)
-
                 z_temp, t_temp = (z_data[i], time_data[j])
                 temp_key = (z_temp, t_temp)
                 haskey(unconverged_data, temp_key) ? unconverged_data[temp_key] += 1 : unconverged_data[temp_key] = 1
@@ -115,38 +123,44 @@ function physical_model(parameters, inputs)
                 haskey(unconverged_t, t_temp) ? unconverged_t[t_temp] += 1 : unconverged_t[t_temp] = 1
             end
         end
-
+        u_star_output[j] = sums[1] / total
+        shf_output[j] = sums[2] / total
+        lhf_output[j] = sums[3] / total
+        buoy_output[j] = sums[4] / total
+        tau_output[j] = sums[5] / total
+        evaporation_output[j] = sums[6] / total
+        L_MO_output[j] = sums[7] / total
     end
-    return output
+    return (u_star_output, shf_output, lhf_output, buoy_output, tau_output, evaporation_output, L_MO_output)
 end
 
-# Our function G simply returns the output of the physical model.
-function G(parameters, inputs)
-    return physical_model(parameters, inputs)
-end
-
-# Define inputs based on data, to be fed into the physical model.
 inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
-
-# The observation data is noisy by default, and we estimate the noise by calculating variance from mean
-# May be an overestimate of noise, but that is ok.
-variance = 0.0
-for x in E_data[1, :]
-    global variance
-    variance += (mean(E_data[1, :]) - x) * (mean(E_data[1, :]) - x)
-end
-variance /= T
-
-Γ = variance * I
-y = E_data
-
 theta_true = (4.7, 4.7, 15.0, 9.0)
-model_truth = physical_model(theta_true, inputs)
+u_star_model, shf_model, lhf_model, buoy_model, tau_model, evaporation_model, L_MO_model = physical_model(theta_true, inputs)
+u_star_model2, shf_model2, lhf_model2, buoy_model2, tau_model2, evaporation_model2, L_MO_model2 = physical_model(theta_true, inputs, true)
 
-heatmap(y)
-title!("y")
-png("images/q_observable/y_plot")
 
-heatmap(model_truth)
-title!("Model_truth")
-png("images/q_observable/model_plot")
+function generate_plot(y, model_truth, model_truth_pTq, name)
+    plot(y, label="y")
+    plot!(model_truth, label="Model Truth")
+    xlabel!("T")
+    ylabel!(name)
+    title!("$(name) Comparison (ρθq)")
+    png("images/observables_$(cfsite)_$(month)/$(name)_ρθq")
+
+    plot(y, label="y")
+    plot!(model_truth_pTq, label="Model Truth")
+    xlabel!("T")
+    ylabel!(name)
+    title!("$(name) Comparison (pTq)")
+    png("images/observables_$(cfsite)_$(month)/$(name)_pTq")
+end
+
+generate_plot(u_star_data, u_star_model, u_star_model2, "u_star")
+generate_plot(shf_data, shf_model, shf_model2, "shf")
+generate_plot(lhf_data, u_star_model, u_star_model2, "lhf")
+generate_plot(buoyancy_flux_data, u_star_model, u_star_model2, "buoyancy_flux")
+generate_plot(τ_data, tau_model, tau_model2, "τ")
+generate_plot(vec(mean(qt_data, dims=1)), evaporation_model, evaporation_model2, "evaporation")
+generate_plot(lmo_data, L_MO_model, L_MO_model2, "L_MO")
+println("Plots generated in folder: images/observables_$(cfsite)_$(month)")
