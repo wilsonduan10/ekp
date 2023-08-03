@@ -33,7 +33,7 @@ localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
 # We extract the relevant data points for our pipeline.
-max_z_index = 20
+max_z_index = 5
 
 time_data = Array(data.group["timeseries"]["t"]) # (865, )
 z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )

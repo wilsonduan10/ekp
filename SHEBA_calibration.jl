@@ -107,10 +107,11 @@ Z, T = size(u_data)
 
 thermo_defaults = get_thermodynamic_defaults()
 thermo_params = TD.Parameters.ThermodynamicsParameters{FT}(; thermo_defaults...)
-R = filter((pair)->pair.first == :gas_constant, thermo_defaults)[1].second
 M = filter((pair)->pair.first == :molmass_dryair, thermo_defaults)[1].second
 g = filter((pair)->pair.first == :grav, thermo_defaults)[1].second
 P_0 = 100000
+R = 287.052874
+R = 8.3
 c_p = 1000
 
 ρ_data = zeros(Z, T)
@@ -131,9 +132,11 @@ end
 
 # calculate z given other metrics
 z_data = zeros(Z, T)
-for i in 1:Z
-    z_data[i, :] = virt_temp_data[i, :] * R / g .* log.(surface_pressure_data ./ p_data[i, :])
+z_data[1, :] = virt_temp_data[1, :] * R / g .* log.(surface_pressure_data ./ p_data[1, :])
+for i in 2:Z
+    z_data[i, :] = z_data[i-1, :] .+ virt_temp_data[i, :] * R / g .* log.(p_data[i-1, :] ./ p_data[i, :])
 end
+z_data = vec(mean(z_data, dims=2))
 
 unconverged_data = Dict{Tuple{FT, FT}, Int64}()
 unconverged_z = Dict{FT, Int64}()

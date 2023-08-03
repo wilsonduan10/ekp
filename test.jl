@@ -34,7 +34,8 @@ thermo_params = TD.Parameters.ThermodynamicsParameters{FT}(; thermo_defaults...)
 R = filter((pair)->pair.first == :gas_constant, thermo_defaults)[1].second
 g = filter((pair)->pair.first == :grav, thermo_defaults)[1].second
 M = filter((pair)->pair.first == :molmass_dryair, thermo_defaults)[1].second
-# P_0 = 100000
+P_0 = 100000
+R = 287.052874
 # c_p = 1000
 
 alt_ρ_data = zeros(Z, T)
@@ -54,10 +55,23 @@ for i in 1:Z
     end
 end
 
-alt_z_data = zeros(Z)
-for i in 1:Z
-    alt_z_data[i] = mean(virt_temp_data[i, :]) * R / g * log(mean(p_data[1, :]) / mean(p_data[i, :])) * 40
+# alt_z_data = zeros(Z)
+# for i in 1:Z
+#     alt_z_data[i] = mean(virt_temp_data[i, :]) * R / g * log(mean(p_data[1, :]) / mean(p_data[i, :])) * 40
+# end
+
+# alt_z_data = zeros(Z)
+# alt_z_data[1] = mean(virt_temp_data[1, :]) * R / g * log(P_0 / mean(p_data[1, :]))
+# for i in 2:Z
+#     alt_z_data[i] = alt_z_data[i-1] + mean(virt_temp_data[i, :]) * R / g * log(mean(p_data[i-1, :]) / mean(p_data[i, :]))
+# end
+
+alt_z_data = zeros(Z, T)
+alt_z_data[1, :] = virt_temp_data[1, :] * R / g .* log.(P_0 ./ p_data[1, :])
+for i in 2:Z
+    alt_z_data[i, :] = alt_z_data[i-1, :] .+ virt_temp_data[i, :] * R / g .* log.(p_data[i-1, :] ./ p_data[i, :])
 end
+alt_z_data = vec(mean(alt_z_data, dims=2))
 
 plot(z_data)
 plot!(alt_z_data)

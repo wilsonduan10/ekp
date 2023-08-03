@@ -48,7 +48,7 @@ localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
 # We extract the relevant data points for our pipeline.
-max_z_index = 20
+max_z_index = 5
 
 time_data = Array(data.group["timeseries"]["t"]) # (865, )
 z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
@@ -79,7 +79,7 @@ unconverged_t = Dict{FT, Int64}()
 # function surface_conditions. We store each time step's u_star and return a list of these u_stars.
 function physical_model(parameters, inputs)
     a_m, a_h, b_m, b_h = parameters
-    (; u, z, time, lhf, shf, z0, κ) = inputs
+    (; u, z, time, lhf, shf, z0) = inputs
 
     overrides = (; a_m, a_h, b_m, b_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides) # override default Businger params
@@ -145,7 +145,7 @@ function G(parameters, inputs)
 end
 
 # Define inputs based on data, to be fed into the physical model.
-inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001, κ = 0.4)
+inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
 
 # The observation data is noisy by default, and we estimate the noise by calculating variance from mean
 # May be an overestimate of noise, but that is ok.
