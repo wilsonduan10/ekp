@@ -111,7 +111,7 @@ M = filter((pair)->pair.first == :molmass_dryair, thermo_defaults)[1].second
 g = filter((pair)->pair.first == :grav, thermo_defaults)[1].second
 P_0 = 100000
 R = 287.052874
-R = 8.3
+# R = 8.3
 c_p = 1000
 
 ρ_data = zeros(Z, T)

@@ -69,7 +69,7 @@ y = κ * u_data / u_star_mean - log.(z_data / z0m)
 
 # Define the spatial domain and discretization 
 dim = 1
-length_scale = 2
+length_scale = 8
 pts_per_dim = LinRange(ζ_data[1], ζ_data[Z], Z)
 dofs = 30
 # smoothness = 1.0
@@ -126,15 +126,15 @@ ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
 png("images/function_learning/final_ensembles")
 
 # plot mean initial ensemble vs y
-plot(ζ_data, vec(mean(constrained_initial_ensemble, dims=2)))
-plot!(ζ_data, y)
+plot(ζ_data, vec(mean(constrained_initial_ensemble, dims=2)), label="mean initial ensemble")
+plot!(ζ_data, y, seriestype=:scatter, label="y")
 xlabel!("ζ")
 ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
 png("images/function_learning/y_vs_initial_ensemble")
 
 # plot mean final ensemble vs y
-plot(ζ_data, vec(mean(final_ensemble, dims=2)))
-plot!(ζ_data, y)
+plot(ζ_data, vec(mean(final_ensemble, dims=2)), label="mean final ensemble")
+plot!(ζ_data, y, seriestype=:scatter, label="y")
 xlabel!("ζ")
 ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
 png("images/function_learning/y_vs_final_ensemble")
