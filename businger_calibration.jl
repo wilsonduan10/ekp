@@ -61,6 +61,11 @@ qt_data = Array(data.group["profiles"]["qt_min"])[1:max_z_index, :] # (200, 865)
 lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
 shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 
+# for pTq
+p_data = Array(data.group["reference"]["p0"]) # (200, )
+surface_temp_data = Array(data.group["timeseries"]["surface_temperature"])
+temp_data = Array(data.group["profiles"]["temperature_mean"]) # (200, 865)
+
 Z, T = size(u_data) # extract dimensions for easier indexing
 
 # We combine the u and v velocities into a single number to facilitate analysis: u = √u^2 + v^2
@@ -92,26 +97,28 @@ function physical_model(parameters, inputs)
         # Define surface conditions based on moist air density, liquid ice potential temperature, and total specific humidity 
         # given from cfSite. 
         ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
+        # ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
         # We now loop through all heights at this time step.
-        for i in 2:Z # starting at 2 because index 1 is our surface conditions
+        for i in 1:Z # starting at 2 because index 1 is our surface conditions
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             
             ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
+            # ts_in = TD.PhaseEquil_ρTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions
             z0m = z0b = z0
             gustiness = FT(1)
-            kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
-            sc = SF.Fluxes{FT}(; kwargs...)
-            # kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
-            # sc = SF.ValuesOnly{FT}(; kwargs...)
+            # kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
+            # sc = SF.Fluxes{FT}(; kwargs...)
+            kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
+            sc = SF.ValuesOnly{FT}(; kwargs...)
 
             # Now, we call surface_conditions and store the calculated ustar. We surround it in a try catch
             # to account for unconverged fluxes.
