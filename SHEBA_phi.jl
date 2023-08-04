@@ -150,9 +150,9 @@ function physical_model(parameters, inputs)
     overrides = (; a_m, a_h, b_m, b_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides)
 
-    u_star = zeros(length(time))
+    L_MO_data = zeros(length(time))
     for j in 1:T # 865
-        u_star_sum = 0.0
+        L_MO_sum = 0.0
         total = 0
         ts_sfc = TD.PhaseEquil_pTq(thermo_params, surface_pressure_data[j], surface_temp_data[j], qt_data[1, j]) # use 1 to get surface conditions
         u_sfc = SVector{2, FT}(FT(0), FT(0))
@@ -170,15 +170,16 @@ function physical_model(parameters, inputs)
             z0m = z0m_data[j]
             z0b = z0b_data[j]
             gustiness = FT(1)
-            kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
-            sc = SF.Fluxes{FT}(; kwargs...)
-            # kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
-            # sc = SF.ValuesOnly{FT}(; kwargs...)
+            # kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
+            # sc = SF.Fluxes{FT}(; kwargs...)
+            kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
+            sc = SF.ValuesOnly{FT}(; kwargs...)
 
             try
                 sf = SF.surface_conditions(surf_flux_params, sc)
-                if (sf.ustar < 1.0)
-                    u_star_sum += sf.ustar
+                # if (sf.L_MO != -Inf && sf.L_MO != Inf)
+                if (sf.L_MO < 500 && sf.L_MO > -500)
+                    L_MO_sum += sf.L_MO
                     total += 1
                 end
             catch e
@@ -194,87 +195,13 @@ function physical_model(parameters, inputs)
         end
 
         total = max(total, 1) # just in case total is zero, we don't want to divide by 0
-        u_star[j] = u_star_sum / total
+        L_MO_data[j] = L_MO_sum / total
     end
-    return u_star
-end
-
-function G(parameters, inputs)
-    u_star = physical_model(parameters, inputs)
-    return u_star
+    return L_MO_data
 end
 
 inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0m_data = z0m_data, z0b_data = z0b_data)
-
-# The observation data is noisy by default, and we estimate the noise by calculating variance from mean
-# May be an overestimate of noise, but that is ok.
-# variance = 0.0
-# for u_star in u_star_data
-#     global variance
-#     variance += (mean(u_star_data) - u_star) * (mean(u_star_data) - u_star)
-# end
-# variance /= T
-variance = 0.10 ^ 2 * (maximum(u_star_data) - minimum(u_star_data)) # assume 10% variance
-
-Γ = variance * I
-y = u_star_data
-
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
-prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf)
-prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
-prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
-
-N_ensemble = 5
-N_iterations = 5
-
-rng_seed = 41
-rng = Random.MersenneTwister(rng_seed)
-initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble)
-
-ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
-
-for n in 1:N_iterations
-    params_i = get_ϕ_final(prior, ensemble_kalman_process)
-    G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
-    EKP.update_ensemble!(ensemble_kalman_process, G_ens)
-end
-
-constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
-final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
-
-plot_params = (;
-    x = time_data,
-    y = y,
-    observable = u_star_data,
-    ax = ("T", "U*"),
-    prior = prior,
-    model = physical_model,
-    inputs = inputs,
-    theta_true = (4.7, 4.7, 15.0, 9.0),
-    theta_bad = (100.0, 100.0, 100.0, 100.0),
-    ensembles = (constrained_initial_ensemble, final_ensemble),
-    N_ensemble = N_ensemble
-)
-
-generate_SHEBA_plots(plot_params, true)
-
-if (length(unconverged_data) > 0)
-    println("Unconverged data points: ", unconverged_data)
-    println("Unconverged z: ", unconverged_z)
-    println("Unconverged t: ", unconverged_t)
-    println()
-end
-
-println("INITIAL ENSEMBLE STATISTICS")
-println("Mean a_m:", mean(constrained_initial_ensemble[1, :])) # [param, ens_no]
-println("Mean a_h:", mean(constrained_initial_ensemble[2, :]))
-println("Mean b_m:", mean(constrained_initial_ensemble[3, :]))
-println("Mean b_h:", mean(constrained_initial_ensemble[4, :]))
-println()
-
-println("FINAL ENSEMBLE STATISTICS")
-println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
-println("Mean a_h:", mean(final_ensemble[2, :]))
-println("Mean b_m:", mean(final_ensemble[3, :]))
-println("Mean b_h:", mean(final_ensemble[4, :]))
+theta_true = (4.7, 4.7, 15.0, 9.0)
+L_MO_data = physical_model(theta_true, inputs)
+plot(L_MO_data, seriestype=:scatter, ms=1.5)
+png("SHEBA_LMO")

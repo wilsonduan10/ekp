@@ -90,7 +90,7 @@ function G(parameters, inputs)
 end
 
 Γ = 0.05^2 * I * (maximum(y) - minimum(y)) # assume this is the amount of noise in observations y
-inputs = (; z = z_data, L_MO = lmo_data)
+inputs = (; z = z_data, L_MO = L_MO_data)
 
 prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
 prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
@@ -121,7 +121,7 @@ prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 ENV["GKSwstype"] = "nul"
 theta_true = (4.7, 4.7, 15.0, 9.0)
 model_truth = model(theta_true, inputs)
-ζ_range = z_data / mean(lmo_data)
+ζ_range = z_data / mean(L_MO_data)
 plot(ζ_range, y, label="y")
 plot!(ζ_range, model_truth, label="Model Truth")
 xlabel!("ζ")

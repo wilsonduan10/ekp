@@ -17,7 +17,7 @@ function next_folder_number(filename, cfsite, month)
 end
 
 function next_SHEBA_number()
-    folders = filter(x -> startswith(x, "SHEBA_"), readdir(joinpath(@__DIR__, "../images")))
+    folders = filter(x -> startswith(x, "SHEBA_"), readdir(joinpath(@__DIR__, "../images/SHEBA")))
     string_length = length("SHEBA_")
     folder_nums = map(x -> parse(Int64, x[string_length+1:end]), folders)
     folder_number = 1
@@ -73,7 +73,7 @@ function plot_y_versus_model(x, y, model, theta_true, inputs, kwargs)
     (; axes, filename, folder_number) = kwargs
     truth = model(theta_true, inputs)
     plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter,)
-    plot!(x, truth, c = :black, label = "Model Truth", legend = :bottomright, ms = 1.5, seriestype=:scatter)
+    plot!(x, truth, c = :red, label = "Model Truth", legend = :bottomright, ms = 1.5, seriestype=:scatter)
     if (!isnothing(axes))
         xlabel!(axes[1])
         ylabel!(axes[2])
@@ -98,6 +98,32 @@ function plot_all(x, y, model, theta_true, inputs, ensembles, N_ensemble, kwargs
         ylabel!(axes[2])
     end
     png("images/$(filename_to_string(filename, folder_number))/our_plot")
+end
+
+function plot_initial_mean(x, y, model, initial_mean, inputs, kwargs)
+    (; axes, filename, folder_number) = kwargs
+    initial = model(initial_mean, inputs)
+
+    plot(x, y, c = :green, label="y",  legend = :bottomright, ms = 1.5, seriestype=:scatter)
+    plot!(x, initial, c=:red, label = "Mean Initial Ensemble", seriestype=:scatter, ms = 1.5)
+    if (!isnothing(axes))
+        xlabel!(axes[1])
+        ylabel!(axes[2])
+    end
+    png("images/$(filename_to_string(filename, folder_number))/initial_ensemble")
+end
+
+function plot_final_mean(x, y, model, final_mean, inputs, kwargs)
+    (; axes, filename, folder_number) = kwargs
+    final = model(final_mean, inputs)
+
+    plot(x, y, c = :green, label="y",  legend = :bottomright, ms = 1.5, seriestype=:scatter)
+    plot!(x, final, c=:blue, label = "Mean Final Ensemble", seriestype=:scatter, ms = 1.5)
+    if (!isnothing(axes))
+        xlabel!(axes[1])
+        ylabel!(axes[2])
+    end
+    png("images/$(filename_to_string(filename, folder_number))/final_ensemble")
 end
 
 function plot_z0s(x, y, z0s, model, theta_true, most_inputs, kwargs)
@@ -153,11 +179,11 @@ function generate_SHEBA_plots(params, new_folder = false)
     if (new_folder)
         folder_number = next_SHEBA_number()
     end
-    mkpath(joinpath(@__DIR__, "../images/SHEBA_$(folder_number)"))
+    mkpath(joinpath(@__DIR__, "../images/SHEBA/SHEBA_$(folder_number)"))
     
     kwargs = (;
         axes = params.ax,
-        filename = ("SHEBA", ),
+        filename = ("SHEBA/SHEBA", ),
         folder_number = folder_number
     )
 
@@ -170,8 +196,15 @@ function generate_SHEBA_plots(params, new_folder = false)
     # plot good model and y
     plot_y_versus_model(params.x, params.y, params.model, params.theta_true, params.inputs, kwargs)
 
-    # plot y, good model, and ensembles
-    plot_all(params.x, params.y, params.model, params.theta_true, params.inputs, params.ensembles, params.N_ensemble, kwargs)
 
-    println("Generated plots in folder: images/SHEBA_$(folder_number)")
+    initial_ensemble, final_ensemble = params.ensembles
+    # plot mean initial ensemble
+    initial_mean = vec(mean(initial_ensemble, dims=2))
+    plot_initial_mean(params.x, params.y, params.model, initial_mean, params.inputs, kwargs)
+
+    # plot mean final ensemble
+    final_mean = vec(mean(final_ensemble, dims=2))
+    plot_final_mean(params.x, params.y, params.model, final_mean, params.inputs, kwargs)
+
+    println("Generated plots in folder: images/SHEBA/SHEBA_$(folder_number)")
 end
