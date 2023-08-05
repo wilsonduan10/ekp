@@ -56,7 +56,7 @@ u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, 
 u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, :] # (200, 865)
 v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, :] # (200, 865)
 ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index] # (200, )
-qt_data = Array(data.group["profiles"]["qt_min"])[1:max_z_index, :] # (200, 865)
+qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, :] # (200, 865)
 θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, :] # (200, 865)
 lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
 shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
@@ -127,7 +127,7 @@ function physical_model(parameters, inputs)
                 u_star_sum += sf.ustar
                 total += 1
             catch e
-                println(e)
+                # println(e)
 
                 z_temp, t_temp = (z_data[i], time_data[j])
                 temp_key = (z_temp, t_temp)

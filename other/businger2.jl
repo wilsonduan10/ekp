@@ -60,7 +60,7 @@ v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)
 p_data = Array(data.group["reference"]["p0"]) # (200, )
 surface_temp_data = Array(data.group["timeseries"]["surface_temperature"])
 temp_data = Array(data.group["profiles"]["temperature_mean"]) # (200, 865)
-qt_data = Array(data.group["profiles"]["qt_min"]) # (200, 865)
+qt_data = Array(data.group["profiles"]["qt_mean"]) # (200, 865)
 lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
 shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
 

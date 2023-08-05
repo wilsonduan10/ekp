@@ -23,7 +23,7 @@ p_data = Array(data.group["reference"]["p0"]) # (200, ) Pa
 ρ_data = Array(data.group["reference"]["rho0"]) # (200, )
 surface_temp_data = Array(data.group["timeseries"]["surface_temperature"]) # K
 temp_data = Array(data.group["profiles"]["temperature_mean"]) # (200, 865) # K
-qt_data = Array(data.group["profiles"]["qt_min"]) # (200, 865)
+qt_data = Array(data.group["profiles"]["qt_mean"]) # (200, 865)
 
 Z, T = size(temp_data) # extract dimensions for easier indexing
 
