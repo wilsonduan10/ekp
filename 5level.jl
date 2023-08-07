@@ -53,6 +53,9 @@ Z, T = size(z_data)
 # filter out bad data
 mask = BitArray(undef, T)
 for i in 1:T
+    mask[i] = false
+end
+for i in 1:T
     if (999.0 in z_data[:, i] || 9999.0 in u_star_data[:, i] || 9999.0 in ws_data[:, i] || 
         9999.0 in wd_data[:, i] || 9999.0 in q_data[:, i] || 9999.0 in shf_data[:, i] || 
         9999.0 in T_data[:, i] || 9999.0 in T_sfc_data[i])
@@ -86,6 +89,7 @@ Z, T = size(z_data)
 p_data = p_data .* 100 # convert mb to Pa
 T_data = T_data .+ 273.15 # convert C to K
 T_sfc_data = T_sfc_data .+ 273.15
+q_data = q_data .* 0.001 # convert from g/kg to kg/kg
 
 u_data = zeros(Z, T)
 v_data = zeros(Z, T)
@@ -171,7 +175,7 @@ inputs = (u = u_data, z = z_data, time = time_data, z0 = 0.0001)
 # end
 # variance /= T
 u_star_data = vec(mean(u_star_data, dims=1))
-variance = 0.001 ^ 2 * (maximum(u_star_data) - minimum(u_star_data)) # assume 10% variance
+variance = 0.05 ^ 2 * (maximum(u_star_data) - minimum(u_star_data)) # assume 5% variance
 
 Γ = variance * I
 y = u_star_data
