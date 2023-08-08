@@ -42,29 +42,33 @@ include("helper/graph.jl")
 # We must first download the netCDF datasets and place them into the data/ directory. We have the option to choose
 # the cfsite and the month where data is taken from, as long as the data has been downloaded.
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-cfsite = 23
-month = "01"
+cfsite = 10
+month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
 # We extract the relevant data points for our pipeline.
 max_z_index = 5
+spin_up = 100
 
-time_data = Array(data.group["timeseries"]["t"]) # (865, )
-z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
-u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
-u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, :] # (200, 865)
-v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, :] # (200, 865)
-ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index] # (200, )
-qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, :] # (200, 865)
-θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, :] # (200, 865)
-lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
-shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
-
-# for pTq
-p_data = Array(data.group["reference"]["p0"]) # (200, )
-surface_temp_data = Array(data.group["timeseries"]["surface_temperature"])
+# profiles
+u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:end] # (200, 865)
+v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, spin_up:end] # (200, 865)
+qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, spin_up:end] # (200, 865)
+θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, spin_up:end] # (200, 865)
 temp_data = Array(data.group["profiles"]["temperature_mean"]) # (200, 865)
+
+# reference
+z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
+ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index] # (200, )
+p_data = Array(data.group["reference"]["p0"]) # (200, )
+
+# timeseries
+time_data = Array(data.group["timeseries"]["t"])[spin_up:end] # (865, )
+u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"])[spin_up:end] # (865, )
+lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"])[spin_up:end] # (865, )
+shf_data = Array(data.group["timeseries"]["shf_surface_mean"])[spin_up:end] # (865, )
+surface_temp_data = Array(data.group["timeseries"]["surface_temperature"])[spin_up:end]
 
 Z, T = size(u_data) # extract dimensions for easier indexing
 
@@ -96,8 +100,8 @@ function physical_model(parameters, inputs)
         total = 0
         # Define surface conditions based on moist air density, liquid ice potential temperature, and total specific humidity 
         # given from cfSite. 
-        ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
-        # ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
+        # ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
+        ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
@@ -108,8 +112,8 @@ function physical_model(parameters, inputs)
             z_in = z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             
-            ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
-            # ts_in = TD.PhaseEquil_ρTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
+            # ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
+            ts_in = TD.PhaseEquil_ρTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions
@@ -123,12 +127,11 @@ function physical_model(parameters, inputs)
             # Now, we call surface_conditions and store the calculated ustar. We surround it in a try catch
             # to account for unconverged fluxes.
             try
-                sf = SF.surface_conditions(surf_flux_params, sc)
+                sf = SF.surface_conditions(surf_flux_params, sc, soltype = RS.VerboseSolution())
                 u_star_sum += sf.ustar
                 total += 1
             catch e
-                # println(e)
-
+                println(e)
                 z_temp, t_temp = (z_data[i], time_data[j])
                 temp_key = (z_temp, t_temp)
                 haskey(unconverged_data, temp_key) ? unconverged_data[temp_key] += 1 : unconverged_data[temp_key] = 1
@@ -184,7 +187,6 @@ rng = Random.MersenneTwister(rng_seed)
 initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble)
 
 ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
-
 # We run ensemble kalman inversrion for N_iterations
 for n in 1:N_iterations
     params_i = get_ϕ_final(prior, ensemble_kalman_process)
@@ -205,7 +207,6 @@ plot_params = (;
     model = physical_model,
     inputs = inputs,
     theta_true = (4.7, 4.7, 15.0, 9.0),
-    theta_bad = (100.0, 100.0, 100.0, 100.0),
     ensembles = (constrained_initial_ensemble, final_ensemble),
     N_ensemble = N_ensemble,
     most_inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data),
