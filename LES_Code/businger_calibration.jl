@@ -35,8 +35,8 @@ using StaticArrays: SVector
 
 # We include some helper files. The first is to set up the parameters for surface\_conditions, and
 # the second is to plot our results.
-include("helper/setup_parameter_set.jl")
-include("helper/graph.jl")
+include("../helper/setup_parameter_set.jl")
+include("../helper/graph.jl")
 
 # We extract data from LES driven by GCM forcings, see https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2021MS002631.
 # We must first download the netCDF datasets and place them into the data/ directory. We have the option to choose
