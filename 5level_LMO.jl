@@ -68,10 +68,10 @@ p_data = p_data[.!mask]
 T_sfc_data = T_sfc_data[.!mask]
 lhf_data = lhf_data[.!mask]
 
-function filter_matrix(param)
+function filter_matrix(data)
     temp = zeros(Z, length(time_data))
     for i in 1:Z
-        temp[i, :] = param[i, :][.!mask]
+        temp[i, :] = data[i, :][.!mask]
     end
     return temp
 end
@@ -92,9 +92,6 @@ T_sfc_data = T_sfc_data .+ 273.15
 q_data = q_data .* 0.001 # convert from g/kg to kg/kg
 
 u_data = zeros(Z, T)
-# for i in 1:Z
-#     u_data[i, :] = ws_data[i, :] .* cos.(deg2rad.(wd_data[i, :]))
-# end
 v_data = zeros(Z, T)
 for i in 1:Z
     u_data[i, :] = ws_data[i, :] .* cos.(deg2rad.(wd_data[i, :]))
@@ -105,36 +102,57 @@ for i in 1:Z
     u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
 end
 
-# construct partial u partial z - change in u / change in z from above and below data point averaged
-dudz_data = zeros(Z, T)
-# first z only uses above data point to calculate gradient
-dudz_data[1, :] = (u_data[2, :] .- u_data[1, :]) ./ (z_data[2, :] .- z_data[1, :])
-# last z only uses below data point to calculate gradient
-dudz_data[Z, :] = (u_data[Z, :] .- u_data[Z - 1, :]) ./ (z_data[Z, :] .- z_data[Z - 1, :])
-for i in 2:Z-1
-    gradient_above = (u_data[i + 1, :] .- u_data[i, :]) ./ (z_data[i + 1, :] .- z_data[i, :])
-    gradient_below = (u_data[i, :] .- u_data[i - 1, :]) ./ (z_data[i, :] .- z_data[i - 1, :])
-    dudz_data[i, :] = (gradient_above .+ gradient_below) ./ 2
-end
+unconverged_data = Dict{Tuple{FT, FT}, Int64}()
+unconverged_z = Dict{FT, Int64}()
+unconverged_t = Dict{FT, Int64}()
 
-κ = 0.4
-y = (κ * z_data) ./ u_star_data .* dudz_data
+function physical_model(parameters, inputs)
+    a_m, a_h, b_m, b_h = parameters
+    (; u, z, time, z0) = inputs
 
-using CSV, DataFrames
+    overrides = (; a_m, a_h, b_m, b_h)
+    thermo_params, surf_flux_params = get_surf_flux_params(overrides)
 
-test_data = CSV.read("data/L_MO.csv", DataFrame, header=false, delim='\t')
-L_MO_data = Matrix(test_data)
-ζ_data = z_data ./ L_MO_data
+    L_MOs = zeros(Z, T)
+    for j in 1:T # 865
+        ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[j], T_sfc_data[j], q_data[1, j]) # use 1 to get surface conditions
+        u_sfc = SVector{2, FT}(FT(0), FT(0))
+        state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
-for i in 1:length(ζ_data)
-    if (ζ_data[i] > 100)
-        ζ_data[i] = 100
+        for i in 1:Z
+            u_in = u[i, j]
+            v_in = FT(0)
+            z_in = z[i, j]
+            u_in = SVector{2, FT}(u_in, v_in)
+
+            ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[j], T_data[i, j], q_data[i, j])
+            state_in = SF.InteriorValues(z_in, u_in, ts_in)
+
+            z0m = z0b = z0
+            gustiness = FT(1)
+            kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
+            sc = SF.ValuesOnly{FT}(; kwargs...)
+
+            try
+                sf = SF.surface_conditions(surf_flux_params, sc)
+                L_MOs[i, j] = sf.L_MO
+            catch e
+                # println(e)
+
+                z_temp, t_temp = (z_data[i, j], time_data[j])
+                temp_key = (z_temp, t_temp)
+                haskey(unconverged_data, temp_key) ? unconverged_data[temp_key] += 1 : unconverged_data[temp_key] = 1
+                haskey(unconverged_z, z_temp) ? unconverged_z[z_temp] += 1 : unconverged_z[z_temp] = 1
+                haskey(unconverged_t, t_temp) ? unconverged_t[t_temp] += 1 : unconverged_t[t_temp] = 1
+            end
+            
+        end
     end
+    return L_MOs
 end
 
-plot(reshape(ζ_data, Z*T), reshape(y, Z*T), seriestype=:scatter)
-xlabel!("ζ")
-ylabel!("ϕ")
+inputs = (u = u_data, z = z_data, time = time_data, z0 = 0.0001)
+theta_true = (4.7, 4.7, 15.0, 9.0)
+model_truth = physical_model(theta_true, inputs)
 
-mkpath("images/SHEBA_psi")
-png("images/SHEBA_psi/test_plot")
+writedlm("data/L_MO.csv", model_truth, '\t')
