@@ -45,19 +45,6 @@ function plot_prior(prior, kwargs)
     png("images/$(filename_to_string(filename, folder_number))/prior_plot")
 end
 
-function plot_good_bad_model(x, model, model_truth, model_bad, inputs, kwargs)
-    (; axes, filename, folder_number) = kwargs
-    truth = model(model_truth, inputs)
-    bad = model(model_bad, inputs)
-    plot(x, truth, c = :black, label = "Model Truth", legend = :bottomright, ms = 1.5, seriestype=:scatter)
-    plot!(x, bad, c = :red, label = "Model Bad", legend = :bottomright, ms = 1.5, seriestype=:scatter)
-    if (!isnothing(axes))
-        xlabel!(axes[1])
-        ylabel!(axes[2])
-    end
-    png("images/$(filename_to_string(filename, folder_number))/good_bad_model")
-end
-
 function plot_noise(x, y, data, kwargs)
     (; axes, filename, folder_number) = kwargs
     plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter)
@@ -159,9 +146,6 @@ function generate_all_plots(params, filename, cfsite, month, new_folder = false)
     # plot priors
     plot_prior(params.prior, kwargs)
 
-    # plot good and bad model
-    plot_good_bad_model(params.x, params.model, params.theta_true, params.theta_bad, params.inputs, kwargs)
-
     # plot good model and y
     plot_y_versus_model(params.x, params.y, params.model, params.theta_true, params.inputs, kwargs)
 
@@ -189,9 +173,6 @@ function generate_SHEBA_plots(params, new_folder = false)
 
     # plot priors
     plot_prior(params.prior, kwargs)
-
-    # plot good and bad model
-    plot_good_bad_model(params.x, params.model, params.theta_true, params.theta_bad, params.inputs, kwargs)
 
     # plot good model and y
     plot_y_versus_model(params.x, params.y, params.model, params.theta_true, params.inputs, kwargs)
