@@ -41,8 +41,8 @@ include("../helper/graph.jl")
 # We extract data from LES driven by GCM forcings, see https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2021MS002631.
 # We must first download the netCDF datasets and place them into the data/ directory. We have the option to choose
 # the cfsite and the month where data is taken from, as long as the data has been downloaded.
-cfsite = 10
-month = "07"
+cfsite = 23
+month = "01"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
@@ -215,4 +215,4 @@ plot_params = (;
     z0s = [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
 )
 
-generate_all_plots(plot_params, "bc", cfsite, month, true)
+generate_all_plots(plot_params, "businger_calibration", "bc", cfsite, month, false)

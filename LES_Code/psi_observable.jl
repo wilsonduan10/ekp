@@ -18,26 +18,33 @@ import Thermodynamics.Parameters as TP
 import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
-include("helper/setup_parameter_set.jl")
+
+include("../helper/setup_parameter_set.jl")
 
 ENV["GKSwstype"] = "nul"
-mkpath(joinpath(@__DIR__, "images"))
-mkpath(joinpath(@__DIR__, "images/psi"))
-mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-localfile = "data/Stats.cfsite23_CNRM-CM5_amip_2004-2008.01.nc"
+
+cfsite = 23
+month = "07"
+localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile);
 
 # Extract data
 max_z_index = 20
+spin_up = 100
 
-time_data = Array(data.group["timeseries"]["t"]) # (865, )
+# profiles
+u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:end] # (200, 865)
+v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, spin_up:end] # (200, 865)
+
+# reference
 z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
-u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
-u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, :] # (200, 865)
-v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, :] # (200, 865)
-lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
-shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
-L_MO_data = Array(data.group["timeseries"]["obukhov_length_mean"]) # (865, )
+
+# timeseries
+time_data = Array(data.group["timeseries"]["t"])[spin_up:end] # (865, )
+u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"])[spin_up:end] # (865, )
+lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"])[spin_up:end] # (865, )
+shf_data = Array(data.group["timeseries"]["shf_surface_mean"])[spin_up:end] # (865, )
+L_MO_data = Array(data.group["timeseries"]["obukhov_length_mean"])[spin_up:end] # (865, )
 
 Z, T = size(u_data) # dimension variables
 
@@ -112,28 +119,6 @@ end
 constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
-# plot y versus model truth
-theta_true = (4.7, 4.7, 15.0, 9.0)
-model_truth = model(theta_true, inputs)
-plot(ζ_data, y, label="y", c=:green)
-plot!(ζ_data, model_truth, label="Model Truth", c=:black)
-xlabel!("ζ")
-ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
-png("images/psi/y_versus_model_truth")
-
-# plot all
-plot(ζ_data, y, label="y", c=:green)
-plot!(ζ_data, model_truth, label="Model Truth", c=:black)
-initial = [model(constrained_initial_ensemble[:, i], inputs) for i in 1:N_ensemble]
-final = [model(final_ensemble[:, i], inputs) for i in 1:N_ensemble]
-initial_label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
-final_label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
-plot!(ζ_data, initial, label=initial_label, c=:red)
-plot!(ζ_data, final, label=final_label, c=:blue)
-xlabel!("ζ")
-ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
-png("images/psi/ensembles_vs_data")
-
 # We print the mean parameters of the initial and final ensemble to identify how
 # the parameters evolved to fit the dataset. 
 println("INITIAL ENSEMBLE STATISTICS")
@@ -148,3 +133,27 @@ println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(final_ensemble[2, :]))
 println("Mean b_m:", mean(final_ensemble[3, :]))
 println("Mean b_h:", mean(final_ensemble[4, :]))
+
+# plot y versus model truth
+theta_true = (4.7, 4.7, 15.0, 9.0)
+model_truth = model(theta_true, inputs)
+plot(ζ_data, y, label="y", c=:green)
+plot!(ζ_data, model_truth, label="Model Truth", c=:black)
+xlabel!("ζ")
+ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
+png("images/LES_psi/y_versus_model_truth")
+
+# plot all
+plot(ζ_data, y, label="y", c=:green)
+plot!(ζ_data, model_truth, label="Model Truth", c=:black)
+initial = [model(constrained_initial_ensemble[:, i], inputs) for i in 1:N_ensemble]
+final = [model(final_ensemble[:, i], inputs) for i in 1:N_ensemble]
+initial_label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
+final_label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
+plot!(ζ_data, initial, label=initial_label, c=:red)
+plot!(ζ_data, final, label=final_label, c=:blue)
+xlabel!("ζ")
+ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
+png("images/LES_psi/ensembles_vs_data")
+
+println("Plots saved in folder images/LES_psi")

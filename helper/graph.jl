@@ -5,8 +5,8 @@ using EnsembleKalmanProcesses.ParameterDistributions
 
 mkpath(joinpath(@__DIR__, "../images"))
 
-function next_folder_number(filename, cfsite, month)
-    folders = filter(x -> startswith(x, "$(filename)_$(cfsite)_$(month)"), readdir(joinpath(@__DIR__, "../images")))
+function next_folder_number(folder_name, filename, cfsite, month)
+    folders = filter(x -> startswith(x, "$(filename)_$(cfsite)_$(month)"), readdir(joinpath(@__DIR__, "../images/$(folder_name)")))
     string_length = length("$(filename)_$(cfsite)_$(month)")
     folder_nums = map(x -> parse(Int64, x[string_length+2:end]), folders)
     folder_number = 1
@@ -18,8 +18,8 @@ end
 
 function next_SHEBA_number()
     folders = filter(x -> startswith(x, "SHEBA_"), readdir(joinpath(@__DIR__, "../images/SHEBA")))
-    string_length = length("SHEBA_")
-    folder_nums = map(x -> parse(Int64, x[string_length+1:end]), folders)
+    string_length = length("SHEBA")
+    folder_nums = map(x -> parse(Int64, x[string_length+2:end]), folders)
     folder_number = 1
     if (length(folder_nums) > 0)
         folder_number = maximum(folder_nums) + 1
@@ -40,24 +40,13 @@ function filename_to_string(filename, folder_number)
 end
 
 function plot_prior(prior, kwargs)
-    (; axes, filename, folder_number) = kwargs
+    (; axes, folder_name, filename, folder_number) = kwargs
     plot(prior)
-    png("images/$(filename_to_string(filename, folder_number))/prior_plot")
-end
-
-function plot_noise(x, y, data, kwargs)
-    (; axes, filename, folder_number) = kwargs
-    plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter)
-    plot!(x, data, c = :red, label = "Data Truth", ms = 1.5, seriestype=:scatter)
-    if (!isnothing(axes))
-        xlabel!(axes[1])
-        ylabel!(axes[2])
-    end
-    png("images/$(filename_to_string(filename, folder_number))/y vs data")
+    png("images/$(folder_name)/$(filename_to_string(filename, folder_number))/prior_plot")
 end
 
 function plot_y_versus_model(x, y, model, theta_true, inputs, kwargs)
-    (; axes, filename, folder_number) = kwargs
+    (; axes, folder_name, filename, folder_number) = kwargs
     truth = model(theta_true, inputs)
     plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter,)
     plot!(x, truth, c = :red, label = "Model Truth", legend = :bottomright, ms = 1.5, seriestype=:scatter)
@@ -65,11 +54,11 @@ function plot_y_versus_model(x, y, model, theta_true, inputs, kwargs)
         xlabel!(axes[1])
         ylabel!(axes[2])
     end
-    png("images/$(filename_to_string(filename, folder_number))/good model and y")
+    png("images/$(folder_name)/$(filename_to_string(filename, folder_number))/good model and y")
 end
 
 function plot_all(x, y, model, theta_true, inputs, ensembles, N_ensemble, kwargs)
-    (; axes, filename, folder_number) = kwargs
+    (; axes, folder_name, filename, folder_number) = kwargs
     initial_ensemble, final_ensemble = ensembles
     initial = [model(initial_ensemble[:, i], inputs) for i in 1:N_ensemble]
     final = [model(final_ensemble[:, i], inputs) for i in 1:N_ensemble]
@@ -84,11 +73,11 @@ function plot_all(x, y, model, theta_true, inputs, ensembles, N_ensemble, kwargs
         xlabel!(axes[1])
         ylabel!(axes[2])
     end
-    png("images/$(filename_to_string(filename, folder_number))/our_plot")
+    png("images/$(folder_name)/$(filename_to_string(filename, folder_number))/our_plot")
 end
 
 function plot_initial_mean(x, y, model, initial_mean, inputs, kwargs)
-    (; axes, filename, folder_number) = kwargs
+    (; axes, folder_name, filename, folder_number) = kwargs
     initial = model(initial_mean, inputs)
 
     plot(x, y, c = :green, label="y",  legend = :bottomright, ms = 1.5, seriestype=:scatter)
@@ -97,11 +86,11 @@ function plot_initial_mean(x, y, model, initial_mean, inputs, kwargs)
         xlabel!(axes[1])
         ylabel!(axes[2])
     end
-    png("images/$(filename_to_string(filename, folder_number))/initial_ensemble")
+    png("images/$(folder_name)/$(filename_to_string(filename, folder_number))/initial_ensemble")
 end
 
 function plot_final_mean(x, y, model, final_mean, inputs, kwargs)
-    (; axes, filename, folder_number) = kwargs
+    (; axes, folder_name, filename, folder_number) = kwargs
     final = model(final_mean, inputs)
 
     plot(x, y, c = :green, label="y",  legend = :bottomright, ms = 1.5, seriestype=:scatter)
@@ -110,11 +99,11 @@ function plot_final_mean(x, y, model, final_mean, inputs, kwargs)
         xlabel!(axes[1])
         ylabel!(axes[2])
     end
-    png("images/$(filename_to_string(filename, folder_number))/final_ensemble")
+    png("images/$(folder_name)/$(filename_to_string(filename, folder_number))/final_ensemble")
 end
 
 function plot_z0s(x, y, z0s, model, theta_true, most_inputs, kwargs)
-    (; axes, filename, folder_number) = kwargs
+    (; axes, folder_name, filename, folder_number) = kwargs
     plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter)
 
     for i in 1:length(z0s)
@@ -127,18 +116,19 @@ function plot_z0s(x, y, z0s, model, theta_true, most_inputs, kwargs)
         xlabel!(axes[1])
         ylabel!(axes[2])
     end
-    png("images/$(filename_to_string(filename, folder_number))/z0_plot")
+    png("images/$(folder_name)/$(filename_to_string(filename, folder_number))/z0_plot")
 end
 
-function generate_all_plots(params, filename, cfsite, month, new_folder = false)
+function generate_all_plots(params, folder_name, filename, cfsite, month, new_folder = false)
     folder_number = 0
     if (new_folder)
-        folder_number = next_folder_number(filename, cfsite, month)
+        folder_number = next_folder_number(folder_name, filename, cfsite, month)
     end
-    mkpath(joinpath(@__DIR__, "../images/$(filename)_$(cfsite)_$(month)_$(folder_number)"))
+    mkpath(joinpath(@__DIR__, "../images/$(folder_name)/$(filename)_$(cfsite)_$(month)_$(folder_number)"))
     
     kwargs = (;
         axes = params.ax,
+        folder_name, 
         filename = (filename, cfsite, month),
         folder_number = folder_number
     )
@@ -155,7 +145,7 @@ function generate_all_plots(params, filename, cfsite, month, new_folder = false)
     # plot y versus model truth given different z0
     plot_z0s(params.x, params.y, params.z0s, params.model, params.theta_true, params.most_inputs, kwargs)
 
-    println("Generated plots in folder: images/$(filename)_$(cfsite)_$(month)_$(folder_number)")
+    println("Generated plots in folder: images/$(folder_name)/$(filename)_$(cfsite)_$(month)_$(folder_number)")
 end
 
 function generate_SHEBA_plots(params, new_folder = false)

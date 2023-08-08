@@ -1,4 +1,4 @@
-# Learrning ψ approximation
+# Learning ψ approximation
 # This file uses ψ as an observable, calculated from data metrics
 using LinearAlgebra, Random
 using Distributions, Plots
@@ -22,26 +22,35 @@ import Thermodynamics.Parameters as TP
 import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
-include("helper/setup_parameter_set.jl")
+
+include("../helper/setup_parameter_set.jl")
 
 ENV["GKSwstype"] = "nul"
-mkpath(joinpath(@__DIR__, "images"))
-mkpath(joinpath(@__DIR__, "images/function_learning"))
-mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-localfile = "data/Stats.cfsite23_CNRM-CM5_amip_2004-2008.01.nc"
+mkpath(joinpath(@__DIR__, "../images"))
+mkpath(joinpath(@__DIR__, "../images/function_learning"))
+
+cfsite = 23
+month = "01"
+localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
 # Extract data
 max_z_index = 20
+spin_up = 100
 
-time_data = Array(data.group["timeseries"]["t"]) # (865, )
-z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
-u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
-u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, :] # (200, 865)
-v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, :] # (200, 865)
-lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
-shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
-L_MO_data = Array(data.group["timeseries"]["obukhov_length_mean"]) # (865, )
+# profiles
+u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:end]
+v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, spin_up:end]
+
+# reference
+z_data = Array(data.group["profiles"]["z"])[1:max_z_index]
+
+# timeseries
+time_data = Array(data.group["timeseries"]["t"])[spin_up:end]
+u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"])[spin_up:end]
+lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"])[spin_up:end]
+shf_data = Array(data.group["timeseries"]["shf_surface_mean"])[spin_up:end]
+L_MO_data = Array(data.group["timeseries"]["obukhov_length_mean"])[spin_up:end]
 
 Z, T = size(u_data) # dimension variables
 
@@ -65,11 +74,11 @@ end
 z0m = 0.0001
 κ = 0.4
 y = κ * u_data / u_star_mean - log.(z_data / z0m)
-Γ = 0.30^2 * I(length(y)) * (maximum(y) - minimum(y)) # assume 30% noise in observations y
+Γ = 0.30^2 * I * (maximum(y) - minimum(y)) # assume 30% noise in observations y
 
 # Define the spatial domain and discretization 
 dim = 1
-length_scale = 8
+length_scale = 20
 pts_per_dim = LinRange(ζ_data[1], ζ_data[Z], Z)
 dofs = 30
 # smoothness = 1.0
