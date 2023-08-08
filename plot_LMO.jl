@@ -27,8 +27,8 @@ include("helper/setup_parameter_set.jl")
 
 mkpath(joinpath(@__DIR__, "images"))
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-cfsite = 23
-month = "01"
+cfsite = 17
+month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 mkpath(joinpath(@__DIR__, "images/L_MO_$(cfsite)_$(month)"))
@@ -73,7 +73,8 @@ unconverged_t = Dict{FT, Int64}()
 
 function get_LMO(parameters, inputs, fluxes = true, ρθq = true)
     a_m, a_h, b_m, b_h = parameters
-    (; u, z, time, lhf, shf, z0) = inputs
+    (; u, z, time, lhf, shf, z0, ustar) = inputs
+
 
     overrides = (; a_m, a_h, b_m, b_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides) # override default Businger params
@@ -112,7 +113,9 @@ function get_LMO(parameters, inputs, fluxes = true, ρθq = true)
             gustiness = FT(1)
             if (fluxes)
                 kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness)
+                # kwargs = (state_in = state_in, state_sfc = state_sfc, shf = shf[j], lhf = lhf[j], z0m = z0m, z0b = z0b, gustiness = gustiness, ustar=ustar[j])
                 sc = SF.Fluxes{FT}(; kwargs...)
+                # sc = SF.FluxesAndFrictionVelocity{FT}(; kwargs...)
             else
                 kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
                 sc = SF.ValuesOnly{FT}(; kwargs...)
@@ -147,7 +150,7 @@ end
 
 ENV["GKSwstype"] = "nul"
 theta_true = (4.7, 4.7, 15.0, 9.0)
-inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
+inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001, ustar = u_star_data)
 # Generate plots with ρθq = true
 # plot with Fluxes
 plot(time_data, lmo_data, c=:black, label="Data L_MO", legend=:bottomright)

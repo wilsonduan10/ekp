@@ -48,6 +48,7 @@ time_data = data[1, :]
 p_data = data[4, :]
 T_sfc_data = data[47, :]
 lhf_data = data[65, :] 
+L_MO_data = Matrix(CSV.read("data/L_MO.csv", DataFrame, header=false, delim='\t'))
 
 Z, T = size(z_data)
 
@@ -69,10 +70,10 @@ p_data = p_data[.!mask]
 T_sfc_data = T_sfc_data[.!mask]
 lhf_data = lhf_data[.!mask]
 
-function filter_matrix(param)
+function filter_matrix(data)
     temp = zeros(Z, length(time_data))
     for i in 1:Z
-        temp[i, :] = param[i, :][.!mask]
+        temp[i, :] = data[i, :][.!mask]
     end
     return temp
 end
@@ -93,9 +94,6 @@ T_sfc_data = T_sfc_data .+ 273.15
 q_data = q_data .* 0.001 # convert from g/kg to kg/kg
 
 u_data = zeros(Z, T)
-# for i in 1:Z
-#     u_data[i, :] = ws_data[i, :] .* cos.(deg2rad.(wd_data[i, :]))
-# end
 v_data = zeros(Z, T)
 for i in 1:Z
     u_data[i, :] = ws_data[i, :] .* cos.(deg2rad.(wd_data[i, :]))
@@ -109,38 +107,51 @@ end
 # construct partial u partial z - change in u / change in z from above and below data point averaged
 dudz_data = zeros(Z, T)
 # first z only uses above data point to calculate gradient
-dudz_data[1, :] = (u_data[2, :] .- u_data[1, :]) ./ max.(1.0, (z_data[2, :] .- z_data[1, :]))
+dudz_data[1, :] = (u_data[2, :] .- u_data[1, :]) ./ (z_data[2, :] .- z_data[1, :])
 # last z only uses below data point to calculate gradient
-dudz_data[Z, :] = (u_data[Z, :] .- u_data[Z - 1, :]) ./ max.(1.0, (z_data[Z, :] .- z_data[Z - 1, :]))
+dudz_data[Z, :] = (u_data[Z, :] .- u_data[Z - 1, :]) ./ (z_data[Z, :] .- z_data[Z - 1, :])
 for i in 2:Z-1
-    gradient_above = (u_data[i + 1, :] .- u_data[i, :]) ./ max.(1.0, (z_data[i + 1, :] .- z_data[i, :]))
-    gradient_below = (u_data[i, :] .- u_data[i - 1, :]) ./ max.(1.0, (z_data[i, :] .- z_data[i - 1, :]))
+    gradient_above = (u_data[i + 1, :] .- u_data[i, :]) ./ (z_data[i + 1, :] .- z_data[i, :])
+    gradient_below = (u_data[i, :] .- u_data[i - 1, :]) ./ (z_data[i, :] .- z_data[i - 1, :])
     dudz_data[i, :] = (gradient_above .+ gradient_below) ./ 2
 end
 
-L_MO_data = CSV.read("data/L_MO.csv", DataFrame, header=false, delim='\t')
-L_MO_data = Matrix(L_MO_data)
+# perform second filter
+mask = BitArray(undef, T)
+for i in 1:T
+    mask[i] = false
+end
+for i in 1:T
+    if (0.0 in u_star_data[:, i] || sum(abs.(L_MO_data[:, i]) .< 0.2) > 0 || Inf in dudz_data[:, i]
+        || -Inf in dudz_data[:, i])
+        mask[i] = true
+    end
+end
+
+time_data = time_data[.!mask]
+
+function filter_matrix2(data)
+    temp = zeros(Z, length(time_data))
+    for i in 1:Z
+        temp[i, :] = data[i, :][.!mask]
+    end
+    return temp
+end
+
+z_data = filter_matrix2(z_data)
+u_star_data = filter_matrix2(u_star_data)
+L_MO_data = filter_matrix2(L_MO_data)
+dudz_data = filter_matrix2(dudz_data)
+
+Z, T = size(z_data)
+
 ζ_data = z_data ./ L_MO_data
 
-for i in 1:length(ζ_data)
-    if (ζ_data[i] > 100)
-        ζ_data[i] = 100
-    end
-end
-
-for i in 1:Z
-    for j in 1:T
-        if (u_star_data[i, j] == 0.0)
-            u_star_data[i, j] = 0.01
-        end
-    end
-end
-
 function model(parameters, inputs)
-    a_m, a_h, b_m, b_h = parameters
+    a_m, b_m = parameters
     (; z, L_MO) = inputs
 
-    overrides = (; a_m, a_h, b_m, b_h)
+    overrides = (; a_m, b_m)
     _, surf_flux_params = get_surf_flux_params(overrides)
 
     uft = UF.BusingerType()
@@ -170,10 +181,8 @@ y = vec(reshape(y, Z*T))
 inputs = (; z = z_data, L_MO = L_MO_data)
 
 prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
-prior_u3 = constrained_gaussian("a_m", 15.0, 6, 0, Inf)
-prior_u4 = constrained_gaussian("a_h", 9.0, 4, 0, Inf)
-prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
+prior_u2 = constrained_gaussian("a_m", 15.0, 6, 0, Inf)
+prior = combine_distributions([prior_u1, prior_u2])
 
 # Set up the initial ensembles
 N_ensemble = 5
@@ -190,6 +199,7 @@ for n in 1:N_iterations
     params_i = get_ϕ_final(prior, ensemble_kalman_process)
     G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
+    println(vec(mean(params_i, dims=2)))
 end
 
 constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
@@ -198,19 +208,39 @@ final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 plot(reshape(ζ_data, Z*T), y, seriestype=:scatter)
 xlabel!("ζ")
 ylabel!("ϕ")
-
 mkpath("images/SHEBA_phi")
 png("images/SHEBA_phi/test_plot")
 
+theta_true = (4.7, 15.0)
+model_truth = model(theta_true, inputs)
+for i in 1:length(model_truth)
+    if (model_truth[i] > 1000)
+        model_truth[i] = 1000
+    end
+end
+plot(reshape(ζ_data, Z*T), model_truth)
+plot!(reshape(ζ_data, Z*T), y, seriestype=:scatter, ms=1.5)
+xlabel!("ζ")
+ylabel!("ϕ")
+png("images/SHEBA_phi/test_plot2")
+
+initial = [model(constrained_initial_ensemble[:, i], inputs) for i in 1:N_ensemble]
+final = [model(final_ensemble[:, i], inputs) for i in 1:N_ensemble]
+initial_label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
+final_label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
+
+plot(reshape(ζ_data, Z*T), y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter,)
+plot!(reshape(ζ_data, Z*T), initial, c = :red, label = initial_label)
+plot!(reshape(ζ_data, Z*T), final, c = :blue, label = final_label)
+xlabel!("ζ")
+ylabel!("ϕ")
+png("images/SHEBA_phi/test_plot3")
+
 println("INITIAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(constrained_initial_ensemble[1, :])) # [param, ens_no]
-println("Mean a_h:", mean(constrained_initial_ensemble[2, :]))
-println("Mean b_m:", mean(constrained_initial_ensemble[3, :]))
-println("Mean b_h:", mean(constrained_initial_ensemble[4, :]))
+println("Mean b_m:", mean(constrained_initial_ensemble[2, :]))
 println()
 
 println("FINAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
-println("Mean a_h:", mean(final_ensemble[2, :]))
-println("Mean b_m:", mean(final_ensemble[3, :]))
-println("Mean b_h:", mean(final_ensemble[4, :]))
+println("Mean b_m:", mean(final_ensemble[2, :]))
