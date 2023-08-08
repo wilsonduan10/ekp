@@ -105,26 +105,40 @@ for i in 1:length(ζ_data)
     end
 end
 
+for i in 1:Z
+    for j in 1:T
+        if (u_star_data[i, j] == 0.0)
+            u_star_data[i, j] = 0.01
+        end
+    end
+end
+
 # our model is ψ(z0m / L_MO) - ψ(z / L_MO)
 function model(parameters, inputs)
     a_m, a_h, b_m, b_h = parameters
-    (; z, L_MO_mean) = inputs
+    (; z, L_MO) = inputs
     overrides = (; a_m, a_h, b_m, b_h)
     _, surf_flux_params = get_surf_flux_params(overrides)
 
     uft = UF.BusingerType()
     transport = UF.MomentumTransport()
 
-    output = zeros(Z)
+    output = zeros(Z, T)
     for i in 1:Z
-        uf = UF.universal_func(uft, L_MO_mean, SFP.uf_params(surf_flux_params))
-        output[i] = UF.psi(uf, z0m / L_MO_mean, transport)
+        for j in 1:T
+            uf = UF.universal_func(uft, L_MO[i, j], SFP.uf_params(surf_flux_params))
+            output[i, j] = UF.psi(uf, z0m / L_MO[i, j], transport)
 
-        uf = UF.universal_func(uft, L_MO_mean, SFP.uf_params(surf_flux_params))
-        ζ = z[i] / L_MO_mean
-        output[i] -= UF.psi(uf, ζ, transport)
+            uf = UF.universal_func(uft, L_MO[i, j], SFP.uf_params(surf_flux_params))
+            ζ = z[i, j] / L_MO[i, j]
+            output[i, j] -= UF.psi(uf, ζ, transport)
+        end
     end
-    return output
+    return vec(reshape(output, Z*T))
+end
+
+function G(parameters, inputs)
+    return model(parameters, inputs)
 end
 
 # construct observable

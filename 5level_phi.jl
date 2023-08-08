@@ -109,12 +109,12 @@ end
 # construct partial u partial z - change in u / change in z from above and below data point averaged
 dudz_data = zeros(Z, T)
 # first z only uses above data point to calculate gradient
-dudz_data[1, :] = (u_data[2, :] .- u_data[1, :]) ./ (z_data[2, :] .- z_data[1, :])
+dudz_data[1, :] = (u_data[2, :] .- u_data[1, :]) ./ max.(1.0, (z_data[2, :] .- z_data[1, :]))
 # last z only uses below data point to calculate gradient
-dudz_data[Z, :] = (u_data[Z, :] .- u_data[Z - 1, :]) ./ (z_data[Z, :] .- z_data[Z - 1, :])
+dudz_data[Z, :] = (u_data[Z, :] .- u_data[Z - 1, :]) ./ max.(1.0, (z_data[Z, :] .- z_data[Z - 1, :]))
 for i in 2:Z-1
-    gradient_above = (u_data[i + 1, :] .- u_data[i, :]) ./ (z_data[i + 1, :] .- z_data[i, :])
-    gradient_below = (u_data[i, :] .- u_data[i - 1, :]) ./ (z_data[i, :] .- z_data[i - 1, :])
+    gradient_above = (u_data[i + 1, :] .- u_data[i, :]) ./ max.(1.0, (z_data[i + 1, :] .- z_data[i, :]))
+    gradient_below = (u_data[i, :] .- u_data[i - 1, :]) ./ max.(1.0, (z_data[i, :] .- z_data[i - 1, :]))
     dudz_data[i, :] = (gradient_above .+ gradient_below) ./ 2
 end
 
@@ -125,6 +125,14 @@ L_MO_data = Matrix(L_MO_data)
 for i in 1:length(ζ_data)
     if (ζ_data[i] > 100)
         ζ_data[i] = 100
+    end
+end
+
+for i in 1:Z
+    for j in 1:T
+        if (u_star_data[i, j] == 0.0)
+            u_star_data[i, j] = 0.01
+        end
     end
 end
 
