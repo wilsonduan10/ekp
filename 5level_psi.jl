@@ -1,4 +1,4 @@
-# Imports
+# This file uses ψ as an observable, calculated from data metrics. The model is just the Businger ψ equation
 using LinearAlgebra, Random
 using Distributions, Plots
 using EnsembleKalmanProcesses
@@ -6,15 +6,12 @@ using EnsembleKalmanProcesses.ParameterDistributions
 const EKP = EnsembleKalmanProcesses
 
 using Downloads
-using DelimitedFiles
 using NCDatasets
+using CSV, DataFrames
 
 using CLIMAParameters
 const CP = CLIMAParameters
 FT = Float64
-
-import RootSolvers
-const RS = RootSolvers
 
 import SurfaceFluxes as SF
 import Thermodynamics as TD
@@ -22,11 +19,7 @@ import Thermodynamics.Parameters as TP
 import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
-
-# We include some helper files. The first is to set up the parameters for surface\_conditions, and
-# the second is to plot our results.
 include("helper/setup_parameter_set.jl")
-include("helper/graph.jl")
 
 mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
 data, headers = readdlm("data/hourly_SHEBA.txt", FT, header=true)
@@ -68,10 +61,10 @@ p_data = p_data[.!mask]
 T_sfc_data = T_sfc_data[.!mask]
 lhf_data = lhf_data[.!mask]
 
-function filter_matrix(param)
+function filter_matrix(data)
     temp = zeros(Z, length(time_data))
     for i in 1:Z
-        temp[i, :] = param[i, :][.!mask]
+        temp[i, :] = data[i, :][.!mask]
     end
     return temp
 end
@@ -92,9 +85,6 @@ T_sfc_data = T_sfc_data .+ 273.15
 q_data = q_data .* 0.001 # convert from g/kg to kg/kg
 
 u_data = zeros(Z, T)
-# for i in 1:Z
-#     u_data[i, :] = ws_data[i, :] .* cos.(deg2rad.(wd_data[i, :]))
-# end
 v_data = zeros(Z, T)
 for i in 1:Z
     u_data[i, :] = ws_data[i, :] .* cos.(deg2rad.(wd_data[i, :]))
@@ -104,23 +94,6 @@ end
 for i in 1:Z
     u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
 end
-
-# construct partial u partial z - change in u / change in z from above and below data point averaged
-dudz_data = zeros(Z, T)
-# first z only uses above data point to calculate gradient
-dudz_data[1, :] = (u_data[2, :] .- u_data[1, :]) ./ (z_data[2, :] .- z_data[1, :])
-# last z only uses below data point to calculate gradient
-dudz_data[Z, :] = (u_data[Z, :] .- u_data[Z - 1, :]) ./ (z_data[Z, :] .- z_data[Z - 1, :])
-for i in 2:Z-1
-    gradient_above = (u_data[i + 1, :] .- u_data[i, :]) ./ (z_data[i + 1, :] .- z_data[i, :])
-    gradient_below = (u_data[i, :] .- u_data[i - 1, :]) ./ (z_data[i, :] .- z_data[i - 1, :])
-    dudz_data[i, :] = (gradient_above .+ gradient_below) ./ 2
-end
-
-κ = 0.4
-y = (κ * z_data) ./ u_star_data .* dudz_data
-
-using CSV, DataFrames
 
 L_MO_data = CSV.read("data/L_MO.csv", DataFrame, header=false, delim='\t')
 L_MO_data = Matrix(L_MO_data)
@@ -132,9 +105,36 @@ for i in 1:length(ζ_data)
     end
 end
 
+# our model is ψ(z0m / L_MO) - ψ(z / L_MO)
+function model(parameters, inputs)
+    a_m, a_h, b_m, b_h = parameters
+    (; z, L_MO_mean) = inputs
+    overrides = (; a_m, a_h, b_m, b_h)
+    _, surf_flux_params = get_surf_flux_params(overrides)
+
+    uft = UF.BusingerType()
+    transport = UF.MomentumTransport()
+
+    output = zeros(Z)
+    for i in 1:Z
+        uf = UF.universal_func(uft, L_MO_mean, SFP.uf_params(surf_flux_params))
+        output[i] = UF.psi(uf, z0m / L_MO_mean, transport)
+
+        uf = UF.universal_func(uft, L_MO_mean, SFP.uf_params(surf_flux_params))
+        ζ = z[i] / L_MO_mean
+        output[i] -= UF.psi(uf, ζ, transport)
+    end
+    return output
+end
+
+# construct observable
+z0m = 0.0001
+κ = 0.4
+y = κ * u_data ./ u_star_data - log.(z_data ./ z0m)
+
 plot(reshape(ζ_data, Z*T), reshape(y, Z*T), seriestype=:scatter)
 xlabel!("ζ")
-ylabel!("ϕ")
+ylabel!("ψ")
 
-mkpath("images/SHEBA_phi")
-png("images/SHEBA_phi/test_plot")
+mkpath("images/SHEBA_psi")
+png("images/SHEBA_psi/test_plot")
