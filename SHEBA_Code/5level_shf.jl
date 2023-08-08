@@ -196,7 +196,7 @@ end
 constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
-all_time = hcat([time_data for i in 1:5])
+all_time = hcat(time_data, time_data, time_data, time_data, time_data)
 all_time = reshape(transpose(all_time), Z*T)
 
 plot_params = (;
