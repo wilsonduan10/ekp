@@ -8,6 +8,7 @@ const EKP = EnsembleKalmanProcesses
 using Downloads
 using DelimitedFiles
 using NCDatasets
+using CSV, DataFrames
 
 using CLIMAParameters
 const CP = CLIMAParameters
@@ -117,11 +118,6 @@ for i in 2:Z-1
     dudz_data[i, :] = (gradient_above .+ gradient_below) ./ 2
 end
 
-κ = 0.4
-y = (κ * z_data) ./ u_star_data .* dudz_data
-
-using CSV, DataFrames
-
 L_MO_data = CSV.read("data/L_MO.csv", DataFrame, header=false, delim='\t')
 L_MO_data = Matrix(L_MO_data)
 ζ_data = z_data ./ L_MO_data
@@ -132,9 +128,81 @@ for i in 1:length(ζ_data)
     end
 end
 
-plot(reshape(ζ_data, Z*T), reshape(y, Z*T), seriestype=:scatter)
+function model(parameters, inputs)
+    a_m, a_h, b_m, b_h = parameters
+    (; z, L_MO) = inputs
+
+    overrides = (; a_m, a_h, b_m, b_h)
+    _, surf_flux_params = get_surf_flux_params(overrides)
+
+    uft = UF.BusingerType()
+    transport = UF.MomentumTransport()
+
+    predicted_phi = zeros(Z, T)
+    for i in 1:Z
+        for j in 1:T
+            uf = UF.universal_func(uft, L_MO[i, j], SFP.uf_params(surf_flux_params))
+            ζ = z[i, j] / L_MO[i, j]
+            predicted_phi[i, j] = UF.phi(uf, ζ, transport)
+        end
+    end
+
+    return vec(reshape(predicted_phi, Z*T))
+end
+
+function G(parameters, inputs)
+    return model(parameters, inputs)
+end
+
+κ = 0.4
+y = (κ * z_data) ./ u_star_data .* dudz_data
+y = vec(reshape(y, Z*T))
+Γ = 0.05^2 * I * (maximum(y) - minimum(y)) # assume this is the amount of noise in observations y
+
+inputs = (; z = z_data, L_MO = L_MO_data)
+
+prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
+prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
+prior_u3 = constrained_gaussian("a_m", 15.0, 6, 0, Inf)
+prior_u4 = constrained_gaussian("a_h", 9.0, 4, 0, Inf)
+prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
+
+# Set up the initial ensembles
+N_ensemble = 5
+N_iterations = 5
+
+rng_seed = 41
+rng = Random.MersenneTwister(rng_seed)
+initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble)
+
+# Define EKP and run iterative solver for defined number of iterations
+ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
+
+for n in 1:N_iterations
+    params_i = get_ϕ_final(prior, ensemble_kalman_process)
+    G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
+    EKP.update_ensemble!(ensemble_kalman_process, G_ens)
+end
+
+constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
+final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
+
+plot(reshape(ζ_data, Z*T), y, seriestype=:scatter)
 xlabel!("ζ")
 ylabel!("ϕ")
 
 mkpath("images/SHEBA_phi")
 png("images/SHEBA_phi/test_plot")
+
+println("INITIAL ENSEMBLE STATISTICS")
+println("Mean a_m:", mean(constrained_initial_ensemble[1, :])) # [param, ens_no]
+println("Mean a_h:", mean(constrained_initial_ensemble[2, :]))
+println("Mean b_m:", mean(constrained_initial_ensemble[3, :]))
+println("Mean b_h:", mean(constrained_initial_ensemble[4, :]))
+println()
+
+println("FINAL ENSEMBLE STATISTICS")
+println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
+println("Mean a_h:", mean(final_ensemble[2, :]))
+println("Mean b_m:", mean(final_ensemble[3, :]))
+println("Mean b_h:", mean(final_ensemble[4, :]))

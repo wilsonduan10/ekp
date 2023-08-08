@@ -166,14 +166,6 @@ end
 
 inputs = (u = u_data, z = z_data, time = time_data, z0 = 0.0001)
 
-# The observation data is noisy by default, and we estimate the noise by calculating variance from mean
-# May be an overestimate of noise, but that is ok.
-# variance = 0.0
-# for u_star in u_star_data
-#     global variance
-#     variance += (mean(u_star_data) - u_star) * (mean(u_star_data) - u_star)
-# end
-# variance /= T
 u_star_data = vec(mean(u_star_data, dims=1))
 variance = 0.05 ^ 2 * (maximum(u_star_data) - minimum(u_star_data)) # assume 5% variance
 
