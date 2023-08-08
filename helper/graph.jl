@@ -157,7 +157,8 @@ function generate_SHEBA_plots(params, new_folder = false)
     
     kwargs = (;
         axes = params.ax,
-        filename = ("SHEBA/SHEBA", ),
+        folder_name = "SHEBA",
+        filename = ("SHEBA", ),
         folder_number = folder_number
     )
 
