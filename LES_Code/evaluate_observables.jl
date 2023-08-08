@@ -20,28 +20,34 @@ mkpath(joinpath(@__DIR__, "../data")) # create data folder if not exists
 cfsite = 10
 month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
-mkpath(joinpath(@__DIR__, "../images/observables_$(cfsite)_$(month)"))
+mkpath(joinpath(@__DIR__, "../images/LES_observables/observables_$(cfsite)_$(month)"))
 data = NCDataset(localfile)
 
 # We extract the relevant data points for our pipeline.
 max_z_index = 5
+spin_up = 100
 
-time_data = Array(data.group["timeseries"]["t"]) # (865, )
-z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
-u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, :] # (200, 865)
-v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, :] # (200, 865)
-u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
-ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index] # (200, )
-qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, :] # (200, 865)
-p_data = Array(data.group["reference"]["p0"])[1:max_z_index] # (200, )
-surface_temp_data = Array(data.group["timeseries"]["surface_temperature"])
-temp_data = Array(data.group["profiles"]["temperature_mean"])[1:max_z_index, :] # (200, 865)
-θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, :] # (200, 865)
-lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
-shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
-uw_data = Array(data.group["timeseries"]["uw_surface_mean"]) # (865, )
-vw_data = Array(data.group["timeseries"]["vw_surface_mean"]) # (865, )
-buoyancy_flux_data = Array(data.group["timeseries"]["buoyancy_flux_surface_mean"]) # (865, )
+# profiles
+u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:end]
+v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, spin_up:end]
+qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, spin_up:end]
+θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, spin_up:end]
+temp_data = Array(data.group["profiles"]["temperature_mean"])
+
+# reference
+z_data = Array(data.group["profiles"]["z"])[1:max_z_index]
+ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index]
+p_data = Array(data.group["reference"]["p0"])
+
+# timeseries
+time_data = Array(data.group["timeseries"]["t"])[spin_up:end]
+u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"])[spin_up:end]
+lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"])[spin_up:end]
+shf_data = Array(data.group["timeseries"]["shf_surface_mean"])[spin_up:end]
+surface_temp_data = Array(data.group["timeseries"]["surface_temperature"])[spin_up:end]
+uw_data = Array(data.group["timeseries"]["uw_surface_mean"])[spin_up:end]
+vw_data = Array(data.group["timeseries"]["vw_surface_mean"])[spin_up:end]
+buoyancy_flux_data = Array(data.group["timeseries"]["buoyancy_flux_surface_mean"])[spin_up:end]
 
 Z, T = size(u_data) # extract dimensions for easier indexing
 
@@ -135,21 +141,20 @@ theta_true = (4.7, 4.7, 15.0, 9.0)
 u_star_model, shf_model, lhf_model, buoy_model, tau_model, evaporation_model = physical_model(theta_true, inputs)
 u_star_model2, shf_model2, lhf_model2, buoy_model2, tau_model2, evaporation_model2 = physical_model(theta_true, inputs, true)
 
-
 function generate_plot(y, model_truth, model_truth_pTq, name)
     plot(y, label="y")
     plot!(model_truth, label="Model Truth")
     xlabel!("T")
     ylabel!(name)
     title!("$(name) Comparison (ρθq)")
-    png("images/observables_$(cfsite)_$(month)/$(name)_ρθq")
+    png("images/LES_observables/observables_$(cfsite)_$(month)/$(name)_ρθq")
 
     plot(y, label="y")
     plot!(model_truth_pTq, label="Model Truth")
     xlabel!("T")
     ylabel!(name)
     title!("$(name) Comparison (pTq)")
-    png("images/observables_$(cfsite)_$(month)/$(name)_pTq")
+    png("images/LES_observables/observables_$(cfsite)_$(month)/$(name)_pTq")
 end
 
 generate_plot(u_star_data, u_star_model, u_star_model2, "u_star")
@@ -158,4 +163,4 @@ generate_plot(lhf_data, lhf_model, lhf_model2, "lhf")
 generate_plot(buoyancy_flux_data, buoy_model, buoy_model2, "buoyancy_flux")
 generate_plot(τ_data, tau_model, tau_model2, "τ")
 generate_plot(vec(mean(qt_data, dims=1)), evaporation_model, evaporation_model2, "evaporation")
-println("Plots generated in folder: images/observables_$(cfsite)_$(month)")
+println("Plots generated in folder: images/LES_observables/observables_$(cfsite)_$(month)")
