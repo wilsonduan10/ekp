@@ -102,7 +102,7 @@ function physical_model(parameters, inputs)
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
         # We now loop through all heights at this time step.
-        for i in 1:Z
+        for i in 2:Z
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i]
