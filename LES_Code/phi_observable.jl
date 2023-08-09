@@ -21,21 +21,23 @@ include("../helper/setup_parameter_set.jl")
 
 mkpath(joinpath(@__DIR__, "../images"))
 mkpath(joinpath(@__DIR__, "../images/phi"))
-mkpath(joinpath(@__DIR__, "../data")) # create data folder if not exists
-localfile = "data/Stats.cfsite17_CNRM-CM5_amip_2004-2008.10.nc"
+cfsite = 23
+month = "01"
+localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
 # Extract data
-max_z_index = 20
+max_z_index = 5
+spin_up = 100
 
-time_data = Array(data.group["timeseries"]["t"]) # (865, )
+time_data = Array(data.group["timeseries"]["t"])[spin_up:end] # (865, )
 z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
-u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
-u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, :] # (200, 865)
-v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, :] # (200, 865)
-lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"]) # (865, )
-shf_data = Array(data.group["timeseries"]["shf_surface_mean"]) # (865, )
-L_MO_data = Array(data.group["timeseries"]["obukhov_length_mean"]) # (865, )
+u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"])[spin_up:end] # (865, )
+u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:end] # (200, 865)
+v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, spin_up:end] # (200, 865)
+lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"])[spin_up:end] # (865, )
+shf_data = Array(data.group["timeseries"]["shf_surface_mean"])[spin_up:end] # (865, )
+L_MO_data = Array(data.group["timeseries"]["obukhov_length_mean"])[spin_up:end] # (865, )
 
 Z, T = size(u_data) # dimension variables
 
@@ -92,11 +94,11 @@ end
 Γ = 0.05^2 * I * (maximum(y) - minimum(y)) # assume this is the amount of noise in observations y
 inputs = (; z = z_data, L_MO = L_MO_data)
 
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
-prior_u3 = constrained_gaussian("a_m", 15.0, 6, 0, Inf)
-prior_u4 = constrained_gaussian("a_h", 9.0, 4, 0, Inf)
-prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
+# prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
+# prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
+# prior_u3 = constrained_gaussian("a_m", 15.0, 6, 0, Inf)
+# prior_u4 = constrained_gaussian("a_h", 9.0, 4, 0, Inf)
+# prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
 # # Set up the initial ensembles
 # N_ensemble = 5
@@ -126,4 +128,4 @@ plot(ζ_range, y, label="y")
 plot!(ζ_range, model_truth, label="Model Truth")
 xlabel!("ζ")
 ylabel!("ϕ(ζ)")
-png("images/phi/y_vs_model_truth")
+png("images/LES_phi/y_vs_model_truth")
