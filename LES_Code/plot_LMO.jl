@@ -29,16 +29,16 @@ cfsite = 23
 month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
-mkpath(joinpath(@__DIR__, "../images/LES_L_MO"))
+mkpath(joinpath(@__DIR__, "../images/LES_LMO"))
 
 # We extract the relevant data points for our pipeline.
 max_z_index = 5
 spin_up = 100
 
 if (max_z_index == 200)
-    output_filepath = "images/LES_L_MO/L_MO_$(cfsite)_$(month)/full"
+    output_filepath = "images/LES_LMO/LMO_$(cfsite)_$(month)/full"
 else
-    output_filepath = "images/LES_L_MO/L_MO_$(cfsite)_$(month)/partial"
+    output_filepath = "images/LES_LMO/LMO_$(cfsite)_$(month)/partial"
 end
 mkpath(output_filepath)
 
@@ -47,12 +47,12 @@ u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:end]
 v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, spin_up:end]
 qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, spin_up:end]
 θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, spin_up:end]
-temp_data = Array(data.group["profiles"]["temperature_mean"])
+temp_data = Array(data.group["profiles"]["temperature_mean"])[1:max_z_index, spin_up:end]
 
 # reference
 z_data = Array(data.group["profiles"]["z"])[1:max_z_index]
 ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index]
-p_data = Array(data.group["reference"]["p0"])
+p_data = Array(data.group["reference"]["p0"])[1:max_z_index]
 
 # timeseries
 time_data = Array(data.group["timeseries"]["t"])[spin_up:end]
