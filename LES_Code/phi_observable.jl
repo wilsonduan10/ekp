@@ -20,7 +20,7 @@ using StaticArrays: SVector
 include("../helper/setup_parameter_set.jl")
 
 mkpath(joinpath(@__DIR__, "../images"))
-mkpath(joinpath(@__DIR__, "../images/phi"))
+mkpath(joinpath(@__DIR__, "../images/LES_phi"))
 cfsite = 23
 month = "01"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
@@ -87,39 +87,10 @@ function model(parameters, inputs)
     return predicted_phi
 end
 
-function G(parameters, inputs)
-    return model(parameters, inputs)
-end
-
 Γ = 0.05^2 * I * (maximum(y) - minimum(y)) # assume this is the amount of noise in observations y
 inputs = (; z = z_data, L_MO = L_MO_data)
 
-# prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
-# prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
-# prior_u3 = constrained_gaussian("a_m", 15.0, 6, 0, Inf)
-# prior_u4 = constrained_gaussian("a_h", 9.0, 4, 0, Inf)
-# prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
-
-# # Set up the initial ensembles
-# N_ensemble = 5
-# N_iterations = 5
-
-# rng_seed = 41
-# rng = Random.MersenneTwister(rng_seed)
-# initial_ensemble = EKP.construct_initial_ensemble(rng, prior, N_ensemble)
-
-# # Define EKP and run iterative solver for defined number of iterations
-# ensemble_kalman_process = EKP.EnsembleKalmanProcess(initial_ensemble, y, Γ, Inversion(); rng = rng)
-
-# for n in 1:N_iterations
-#     params_i = get_ϕ_final(prior, ensemble_kalman_process)
-#     G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
-#     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
-# end
-
-# constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
-# final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
-
+# plot to evaluate if calibration will be possible
 ENV["GKSwstype"] = "nul"
 theta_true = (4.7, 4.7, 15.0, 9.0)
 model_truth = model(theta_true, inputs)
