@@ -109,7 +109,7 @@ y = vec(reshape(y, Z*T))
 inputs = (; z = z_data, L_MO = L_MO_data)
 
 prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
-prior_u2 = constrained_gaussian("a_m", 15.0, 6, 0, Inf)
+prior_u2 = constrained_gaussian("b_m", 15.0, 6, 0, Inf)
 prior = combine_distributions([prior_u1, prior_u2])
 
 # Set up the initial ensembles
@@ -167,3 +167,5 @@ println()
 println("FINAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
 println("Mean b_m:", mean(final_ensemble[2, :]))
+
+println("Plots stored in images/SHEBA_phi")
