@@ -47,7 +47,7 @@ function physical_model(parameters, inputs, info = "ValuesOnly")
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
-        for i in 1:Z
+        for i in 2:Z
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i, j]
@@ -114,16 +114,16 @@ for i in 1:Z
     end
 end
 
-# z1 plot
+mkpath(joinpath(@__DIR__, "../images/SHEBA_LMO"))
 z = 3
 plot(time_data, values_only_truth[z, :], seriestype=:scatter, ms=1.5)
-png("test_plot")
+png("images/SHEBA_LMO/values_only")
 
 plot(time_data, fluxes_truth[z, :], seriestype=:scatter, ms=1.5)
-png("test_plot2")
+png("images/SHEBA_LMO/fluxes")
 
 plot(time_data, fluxes_and_ustar_truth[z, :], seriestype=:scatter, ms=1.5)
-png("test_plot3")
+png("images/SHEBA_LMO/fluxes_and_ustar")
 
 # write L_MOs to file for external use
 # writedlm("data/L_MO.csv", model_truth, '\t')

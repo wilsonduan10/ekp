@@ -47,7 +47,7 @@ function physical_model(parameters, inputs)
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
-        for i in 1:Z
+        for i in 2:Z
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i, j]
