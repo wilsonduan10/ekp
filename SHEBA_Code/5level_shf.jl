@@ -77,7 +77,7 @@ function physical_model(parameters, inputs)
         end
 
     end
-    return vec(reshape(output, Z*T))
+    return vec(mean(output, dims=1))
 end
 
 function G(parameters, inputs)
@@ -86,10 +86,9 @@ function G(parameters, inputs)
 end
 
 inputs = (u = u_data, z = z_data, time = time_data, z0 = 0.0001)
-
-variance = 0.05 ^ 2 * (maximum(shf_data) - minimum(shf_data)) # assume 5% variance
+y = shf_data[1, :]
+variance = 0.05 ^ 2 * (maximum(y) - minimum(y)) # assume 5% variance
 Γ = variance * I
-y = vec(reshape(shf_data, Z * T))
 
 prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, 10)
 prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, 10)
@@ -115,22 +114,6 @@ end
 constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
-all_time = hcat(time_data, time_data, time_data, time_data, time_data)
-all_time = reshape(transpose(all_time), Z*T)
-
-plot_params = (;
-    x = all_time,
-    y = y,
-    observable = vec(reshape(shf_data, Z*T)),
-    ax = ("T", "shf"),
-    prior = prior,
-    model = physical_model,
-    inputs = inputs,
-    theta_true = (4.7, 4.7, 15.0, 9.0),
-    ensembles = (constrained_initial_ensemble, final_ensemble),
-    N_ensemble = N_ensemble
-)
-
 if (length(unconverged_data) > 0)
     println("Unconverged data points: ", unconverged_data)
     println("Unconverged z: ", unconverged_z)
@@ -151,4 +134,17 @@ println("Mean a_h:", mean(final_ensemble[2, :]))
 println("Mean b_m:", mean(final_ensemble[3, :]))
 println("Mean b_h:", mean(final_ensemble[4, :]))
 
-generate_SHEBA_plots(plot_params, true)
+plot_params = (;
+    x = time_data,
+    y = y,
+    observable = shf_data[1, :],
+    ax = ("T", "shf"),
+    prior = prior,
+    model = physical_model,
+    inputs = inputs,
+    theta_true = (4.7, 4.7, 15.0, 9.0),
+    ensembles = (constrained_initial_ensemble, final_ensemble),
+    N_ensemble = N_ensemble
+)
+
+generate_SHEBA_plots(plot_params, false)
