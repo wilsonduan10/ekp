@@ -25,82 +25,10 @@ using StaticArrays: SVector
 
 # We include some helper files. The first is to set up the parameters for surface\_conditions, and
 # the second is to plot our results.
-include("helper/setup_parameter_set.jl")
-include("helper/graph.jl")
+include("../helper/setup_parameter_set.jl")
+include("../helper/graph.jl")
 
-mkpath(joinpath(@__DIR__, "data")) # create data folder if not exists
-data, headers = readdlm("data/hourly_SHEBA.txt", FT, header=true)
-headers = vec(headers)
-data = transpose(data)
-
-# profiles
-z_data = data[5:9, :]
-u_star_data = data[55:59, :]
-ws_data = data[11:15, :]
-wd_data = data[16:20, :]
-q_data = data[26:30, :]
-shf_data = data[60:64, :]
-T_data = data[21:25, :]
-
-# timeseries
-time_data = data[1, :]
-p_data = data[4, :]
-T_sfc_data = data[47, :]
-lhf_data = data[65, :] 
-
-Z, T = size(z_data)
-
-# filter out bad data
-mask = BitArray(undef, T)
-for i in 1:T
-    mask[i] = false
-end
-for i in 1:T
-    if (999.0 in z_data[:, i] || 9999.0 in u_star_data[:, i] || 9999.0 in ws_data[:, i] || 
-        9999.0 in wd_data[:, i] || 9999.0 in q_data[:, i] || 9999.0 in shf_data[:, i] || 
-        9999.0 in T_data[:, i] || 9999.0 in T_sfc_data[i])
-        mask[i] = true
-    end
-end
-
-time_data = time_data[.!mask]
-p_data = p_data[.!mask]
-T_sfc_data = T_sfc_data[.!mask]
-lhf_data = lhf_data[.!mask]
-
-function filter_matrix(data)
-    temp = zeros(Z, length(time_data))
-    for i in 1:Z
-        temp[i, :] = data[i, :][.!mask]
-    end
-    return temp
-end
-
-z_data = filter_matrix(z_data)
-q_data = filter_matrix(q_data)
-u_star_data = filter_matrix(u_star_data)
-ws_data = filter_matrix(ws_data)
-wd_data = filter_matrix(wd_data)
-shf_data = filter_matrix(shf_data)
-T_data = filter_matrix(T_data)
-
-Z, T = size(z_data)
-
-p_data = p_data .* 100 # convert mb to Pa
-T_data = T_data .+ 273.15 # convert C to K
-T_sfc_data = T_sfc_data .+ 273.15
-q_data = q_data .* 0.001 # convert from g/kg to kg/kg
-
-u_data = zeros(Z, T)
-v_data = zeros(Z, T)
-for i in 1:Z
-    u_data[i, :] = ws_data[i, :] .* cos.(deg2rad.(wd_data[i, :]))
-    v_data[i, :] = ws_data[i, :] .* sin.(deg2rad.(wd_data[i, :]))
-end
-
-for i in 1:Z
-    u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
-end
+include("5level_data.jl")
 
 unconverged_data = Dict{Tuple{FT, FT}, Int64}()
 unconverged_z = Dict{FT, Int64}()
@@ -159,23 +87,14 @@ end
 
 inputs = (u = u_data, z = z_data, time = time_data, z0 = 0.0001)
 
-# The observation data is noisy by default, and we estimate the noise by calculating variance from mean
-# May be an overestimate of noise, but that is ok.
-# variance = 0.0
-# for u_star in u_star_data
-#     global variance
-#     variance += (mean(u_star_data) - u_star) * (mean(u_star_data) - u_star)
-# end
-# variance /= T
 variance = 0.05 ^ 2 * (maximum(shf_data) - minimum(shf_data)) # assume 5% variance
-
 Γ = variance * I
 y = vec(reshape(shf_data, Z * T))
 
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
-prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf)
-prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
+prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, 10)
+prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, 10)
+prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, 30)
+prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, 30)
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
 N_ensemble = 5
@@ -208,12 +127,9 @@ plot_params = (;
     model = physical_model,
     inputs = inputs,
     theta_true = (4.7, 4.7, 15.0, 9.0),
-    theta_bad = (100.0, 100.0, 100.0, 100.0),
     ensembles = (constrained_initial_ensemble, final_ensemble),
     N_ensemble = N_ensemble
 )
-
-generate_SHEBA_plots(plot_params, true)
 
 if (length(unconverged_data) > 0)
     println("Unconverged data points: ", unconverged_data)
@@ -234,3 +150,5 @@ println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(final_ensemble[2, :]))
 println("Mean b_m:", mean(final_ensemble[3, :]))
 println("Mean b_h:", mean(final_ensemble[4, :]))
+
+generate_SHEBA_plots(plot_params, true)
