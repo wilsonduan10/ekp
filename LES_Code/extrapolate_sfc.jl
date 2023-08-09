@@ -75,6 +75,48 @@ Z, T = size(u_data) # extract dimensions for easier indexing
 for i in 1:Z
     u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
 end
+#=
+function surface_thermo_state(
+    sim::Interfacer.SurfaceModelSimulation,
+    thermo_params::TD.Parameters.ThermodynamicsParameters,
+    thermo_state_int,
+    colidx::Fields.ColumnIndex,
+)
+    @warn("Simulation " * Interfacer.name(sim) * " uses the default thermo (saturated) surface state", maxlog = 10)
+    T_sfc = Interfacer.get_field(sim, Val(:surface_temperature), colidx) #
+    ρ_sfc = extrapolate_ρ_to_sfc.(thermo_params, thermo_state_int, T_sfc) # ideally the # calculate elsewhere, here just getter...
+    q_sfc = TD.q_vap_saturation_generic.(thermo_params, T_sfc, ρ_sfc, TD.Liquid()) # default: saturated liquid surface
+    @. TD.PhaseEquil_ρTq.(thermo_params, ρ_sfc, T_sfc, q_sfc)
+end
+=#
+"""
+    extrapolate_ρ_to_sfc(thermo_params, ts_int, T_sfc)
+
+Uses the ideal gas law and hydrostatic balance to extrapolate for surface density.
+"""
+function extrapolate_ρ_to_sfc(thermo_params, ts_in, T_sfc)
+    T_int = TD.air_temperature(thermo_params, ts_in)
+    Rm_int = TD.gas_constant_air(thermo_params, ts_in)
+    ρ_air = TD.air_density(thermo_params, ts_in)
+    ρ_air * (T_sfc / T_int)^(TD.cv_m(thermo_params, ts_in) / Rm_int)
+end
+
+thermo_params, _ = get_surf_flux_params((;))
+
+our_sum = 0.0
+total = 0
+for j in 1:T
+    for i in 2:Z
+        # ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
+        ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
+        ρ = extrapolate_ρ_to_sfc(thermo_params, ts_in, surface_temp_data[j])
+        println(ρ)
+        our_sum += ρ
+        total += 1
+    end
+end
+our_sum /= total
+
 
 # Because the model sometimes fails to converge, we store unconverged values in a dictionary
 # so we can analyze and uncover the cause of failure.
@@ -99,7 +141,9 @@ function physical_model(parameters, inputs)
         ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
         # ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
         u_sfc = SVector{2, FT}(FT(0), FT(0))
-        state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
+        # u_sfc = SVector{2, FT}(u[1, j], FT(0))
+        # state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
+        state_sfc = SF.SurfaceValues(z[1], u_sfc, ts_sfc)
 
         # We now loop through all heights at this time step.
         for i in 2:Z
@@ -145,13 +189,10 @@ function G(parameters, inputs)
 end
 
 inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
-theta_true = (4.7, 4.7, 15.0, 9.0)
-y = G(theta_true, inputs)
 
-# add 5% noise to model truth to obtain y
-Γ = 0.05^2 * I * (maximum(y) - minimum(y))
-noise_dist = MvNormal(zeros(T), Γ)
-y = y .+ rand(noise_dist)
+variance = 0.05^2 * (maximum(u_star_data) - minimum(u_star_data)) # assume 5% noise
+Γ = variance * I
+y = u_star_data
 
 # Define the prior parameter values which we wish to recover in our pipeline. They are constrained
 # to be non-negative due to physical laws, and their mean is given by Businger et al 1971.
@@ -220,5 +261,4 @@ plot_params = (;
     z0s = [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
 )
 
-println()
-generate_all_plots(plot_params, "perfect_model", "pm", cfsite, month, false)
+generate_all_plots(plot_params, "businger_calibration", "bc", cfsite, month, false)

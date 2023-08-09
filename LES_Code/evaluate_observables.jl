@@ -94,7 +94,7 @@ function physical_model(parameters, inputs, pTq = false)
             u_in = SVector{2, FT}(u_in, v_in)
             
             if (pTq)
-                ts_in = TD.PhaseEquil_ρTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
+                ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
             else
                 ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
             end
