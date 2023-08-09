@@ -102,7 +102,7 @@ function physical_model(parameters, inputs)
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
         # We now loop through all heights at this time step.
-        for i in 1:Z
+        for i in 2:Z
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i]
@@ -143,6 +143,8 @@ end
 function G(parameters, inputs)
     return physical_model(parameters, inputs)
 end
+
+inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
 
 variance = 0.05^2 * (maximum(u_star_data) - minimum(u_star_data)) # assume 5% noise
 Γ = variance * I
