@@ -16,7 +16,6 @@ using StaticArrays: SVector
 
 include("../helper/setup_parameter_set.jl")
 
-mkpath(joinpath(@__DIR__, "../data")) # create data folder if not exists
 cfsite = 10
 month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
