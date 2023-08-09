@@ -152,4 +152,18 @@ println("FINAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
 println("Mean b_m:", mean(final_ensemble[2, :]))
 
-println("Plots stored in images/SHEBA_psi")
+println("\nPlots stored in images/SHEBA_psi")
+
+function calculate_error(y, output)
+    sum = 0
+    for i in 1:length(y)
+        sum += (y[i] - output[i]) ^ 2
+    end
+    return sum
+end
+
+truth_error = calculate_error(y, model_truth)
+final_error = calculate_error(y, model(vec(mean(final_ensemble, dims=2)), inputs))
+
+println("\nTruth error: ", truth_error)
+println("Final ensemble error: ", final_error)
