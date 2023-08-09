@@ -196,7 +196,6 @@ ylabel!("L_MO")
 png("$(output_filepath)/values_only_2")
 
 # plot with FluxesAndFrictionVelocity
-# plot with FluxesAndFrictionVelocity
 plot(time_data, L_MO_data, c=:black, label="Data L_MO", legend=:bottomright)
 plot!(time_data, get_LMO(theta_true, inputs, "FluxesAndFrictionVelocity", false), label="Model L_MO", seriestype=:scatter, ms=1.5)
 title!("FluxesAndFrictionVelocity and pTq Scheme")
