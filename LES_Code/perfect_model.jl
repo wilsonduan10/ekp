@@ -144,6 +144,7 @@ function G(parameters, inputs)
     return physical_model(parameters, inputs)
 end
 
+inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
 theta_true = (4.7, 4.7, 15.0, 9.0)
 y = G(theta_true, inputs)
 
