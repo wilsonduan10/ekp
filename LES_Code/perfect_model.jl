@@ -138,7 +138,7 @@ theta_true = (4.7, 4.7, 15.0, 9.0)
 y = G(theta_true, inputs)
 
 # add 5% noise to model truth to obtain y
-Γ = 0.05^2 * I * (maximum(y) - minimum(y))
+Γ = 0.03^2 * I * (maximum(y) - minimum(y))
 noise_dist = MvNormal(zeros(T), Γ)
 y = y .+ rand(noise_dist)
 
@@ -212,4 +212,4 @@ plot_params = (;
 )
 
 println()
-generate_all_plots(plot_params, "perfect_model", "pm", cfsite, month, false)
+generate_all_plots(plot_params, "LES_perfect_model", "pm", cfsite, month, false)
