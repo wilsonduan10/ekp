@@ -1,14 +1,3 @@
-#=
-In this file, we use the ensemble kalman inversion process to calibrate four parameters:
-a\_m, a\_h, b\_m, and b\_h in the Businger stability functions, where a_m and a_h are parameters
-in the stable regime, and b_m and b_h pertain to the unstable regime. We use data from Shen 2022,
-cfSite LES data with GCM forcings. We use u_star as our observable, and predict u_star using 
-the function surface_conditions from the SurfaceFluxes.jl package, which uses the Monin-Obukhov
-similarity theory to calculate important scales such as the monin-obukhov length and u_star. The 
-goal of this process is to analyze the efficacy of EKP in the context of surface fluxes. We visualize
-the success of the model through several plots.
-=#
-
 # Imports
 using LinearAlgebra, Random
 using Distributions, Plots
@@ -176,6 +165,8 @@ for n in 1:N_iterations
     params_i = get_ϕ_final(prior, ensemble_kalman_process)
     G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
+    err = get_error(ensemble_kalman_process)[end] #mean((params_true - mean(params_i,dims=2)).^2)
+    println("Iteration: " * string(i) * ", Error: " * string(err))
 end
 
 # We extract the constrained initial and final ensemble for analysis
@@ -192,7 +183,7 @@ end
 
 # We print the mean parameters of the initial and final ensemble to identify how
 # the parameters evolved to fit the dataset. 
-println("INITIAL ENSEMBLE STATISTICS")
+println("\nINITIAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(constrained_initial_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(constrained_initial_ensemble[2, :]))
 println("Mean b_m:", mean(constrained_initial_ensemble[3, :]))
