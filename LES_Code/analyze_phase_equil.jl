@@ -142,16 +142,13 @@ qt_sum = 0.0
 total = 0
 
 for j in 1:T
-    for i in 2:Z
+    for i in 2:2
         global ρ_sum, qt_sum, total
         # ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
         # ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
         ts_in = TD.PhaseEquil_ρTq(thermo_params, ρ_data[i], temp_data[i, j], qt_data[i, j])
         ρ = extrapolate_ρ_to_sfc(thermo_params, ts_in, surface_temp_data[j])
-        # (q_sfc, ) = TD.q_vap_saturation_generic.(thermo_params, surface_temp_data[j], ρ, TD.Liquid())
         q_sfc = TD.q_vap_saturation(thermo_params, surface_temp_data[j], ρ, TD.PhaseEquil)
-        # q_sfc2 = TD.q_vap_saturation(thermo_params, ts_in)
-        # q_sfc4 = TD.q_vap_saturation_from_pressure(thermo_params, q_tot, p, T, phase_type)
         
         ρ_sum += ρ
         qt_sum += q_sfc

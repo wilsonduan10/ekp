@@ -89,10 +89,12 @@ function get_LMO(parameters, inputs, info = "Fluxes", ρθq = true)
         if (ρθq)
             ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
         else
-            ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
+            # ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
+            ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], temp_data[1, j], qt_data[1, j])
         end
         u_sfc = SVector{2, FT}(FT(0), FT(0))
-        state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
+        # state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
+        state_sfc = SF.SurfaceValues(z[1], u_sfc, ts_sfc)
 
         # We now loop through all heights at this time step.
         for i in 2:Z # starting at 2 because index 1 is our surface conditions
