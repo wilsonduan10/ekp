@@ -175,6 +175,8 @@ for n in 1:N_iterations
     params_i = get_ϕ_final(prior, ensemble_kalman_process)
     G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
+    err = get_error(ensemble_kalman_process)[end] #mean((params_true - mean(params_i,dims=2)).^2)
+    println("Iteration: " * string(n) * ", Error: " * string(err))
 end
 
 # We extract the constrained initial and final ensemble for analysis
@@ -191,7 +193,7 @@ end
 
 # We print the mean parameters of the initial and final ensemble to identify how
 # the parameters evolved to fit the dataset. 
-println("INITIAL ENSEMBLE STATISTICS")
+println("\nINITIAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(constrained_initial_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(constrained_initial_ensemble[2, :]))
 println("Mean b_m:", mean(constrained_initial_ensemble[3, :]))
@@ -219,4 +221,5 @@ plot_params = (;
     z0s = [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
 )
 
+println()
 generate_all_plots(plot_params, "businger_calibration", "bc", cfsite, month, false)

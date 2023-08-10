@@ -166,7 +166,7 @@ for n in 1:N_iterations
     G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
     err = get_error(ensemble_kalman_process)[end] #mean((params_true - mean(params_i,dims=2)).^2)
-    println("Iteration: " * string(i) * ", Error: " * string(err))
+    println("Iteration: " * string(n) * ", Error: " * string(err))
 end
 
 # We extract the constrained initial and final ensemble for analysis
