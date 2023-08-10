@@ -1,9 +1,6 @@
 # Imports
 using LinearAlgebra, Random
 using Distributions, Plots
-using EnsembleKalmanProcesses
-using EnsembleKalmanProcesses.ParameterDistributions
-const EKP = EnsembleKalmanProcesses
 
 using Downloads
 using NCDatasets
@@ -12,15 +9,8 @@ using CLIMAParameters
 const CP = CLIMAParameters
 FT = Float64
 
-import RootSolvers
-const RS = RootSolvers
-
 import SurfaceFluxes as SF
 import Thermodynamics as TD
-import Thermodynamics.Parameters as TP
-import SurfaceFluxes.UniversalFunctions as UF
-import SurfaceFluxes.Parameters as SFP
-using StaticArrays: SVector
 
 # We include some helper files. The first is to set up the parameters for surface\_conditions, and
 # the second is to plot our results.
@@ -34,6 +24,8 @@ cfsite = 23
 month = "01"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
+
+mkpath("images/PhaseEquil_plots")
 
 # We extract the relevant data points for our pipeline.
 max_z_index = 5 # since MOST allows data only in the surface layer
@@ -65,7 +57,6 @@ for i in 1:Z
     u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
 end
 
-
 """
     extrapolate_ρ_to_sfc(thermo_params, ts_int, T_sfc)
 
@@ -80,26 +71,7 @@ end
 
 thermo_params, _ = get_surf_flux_params((;))
 
-
-our_sum = 0.0
-our_sum2 = 0.0
-total = 0
-for j in 1:T
-    for i in 2:Z
-        # ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
-        # ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
-        ts_in = TD.PhaseEquil_ρTq(thermo_params, ρ_data[i], temp_data[i, j], qt_data[i, j])
-        ρ = extrapolate_ρ_to_sfc(thermo_params, ts_in, surface_temp_data[j])
-        (q_sfc, ) = TD.q_vap_saturation_generic.(thermo_params, surface_temp_data[j], ρ, TD.Liquid())
-        # println(ρ, ", ", q_sfc)
-        our_sum += ρ
-        our_sum2 += q_sfc
-        total += 1
-    end
-end
-our_sum /= total
-our_sum2 /= total
-
+# check TD.PhaseEquil_ρθq
 p_alt = zeros(Z, T)
 T_alt = zeros(Z, T)
 for j in 1:T
@@ -119,15 +91,16 @@ plot!(z_data, p_alt, label="estimate")
 title!("Pressure Comparison with ρθq")
 xlabel!("Z")
 ylabel!("Pressure (Pa)")
-png("pressure_ρθq")
+png("images/PhaseEquil_plots/pressure_ρθq")
 
 plot(z_data, T_data, label="data")
 plot!(z_data, T_alt, label="estimate")
 title!("Temperature Comparison with ρθq")
 xlabel!("Z")
 ylabel!("Temperature (K)")
-png("temp_ρθq")
+png("images/PhaseEquil_plots/temp_ρθq")
 
+# check TD.PhaseEquil_pTq
 ρ_alt = zeros(Z, T)
 for j in 1:T
     for i in 1:Z
@@ -143,8 +116,9 @@ plot!(z_data, ρ_alt, label="estimate")
 title!("Air density Comparison with pTq")
 xlabel!("Z")
 ylabel!("Air density (kg/m^3)")
-png("rho_pTq")
+png("images/PhaseEquil_plots/rho_pTq")
 
+# check D.PhaseEquil_ρTq
 p_alt = zeros(Z, T)
 for j in 1:T
     for i in 1:Z
@@ -159,4 +133,35 @@ plot!(z_data, p_alt, label="estimate")
 title!("Pressure Comparison with ρTq")
 xlabel!("Z")
 ylabel!("Pressure (Pa)")
-png("pressure_ρTq")
+png("images/PhaseEquil_plots/pressure_ρTq")
+
+# analyze extrapolated surface values
+ρ_sum = 0.0
+qt_sum = 0.0
+total = 0
+
+for j in 1:T
+    for i in 2:Z
+        global ρ_sum, qt_sum, total
+        # ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
+        # ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
+        ts_in = TD.PhaseEquil_ρTq(thermo_params, ρ_data[i], temp_data[i, j], qt_data[i, j])
+        ρ = extrapolate_ρ_to_sfc(thermo_params, ts_in, surface_temp_data[j])
+        # (q_sfc, ) = TD.q_vap_saturation_generic.(thermo_params, surface_temp_data[j], ρ, TD.Liquid())
+        q_sfc2 = TD.q_vap_saturation(thermo_params, surface_temp_data[j], ρ, TD.PhaseEquil)
+        # q_sfc2 = TD.q_vap_saturation(thermo_params, ts_in)
+        # q_sfc4 = TD.q_vap_saturation_from_pressure(thermo_params, q_tot, p, T, phase_type)
+        
+        ρ_sum += ρ
+        qt_sum += q_sfc
+        total += 1
+    end
+end
+ρ_sum /= total
+qt_sum /= total
+
+println(ρ_data)
+println("Extrapolated surface ρ: ", ρ_sum)
+
+println(vec(mean(qt_data, dims=2)))
+println("Extrapolated surface qt: ", qt_sum)
