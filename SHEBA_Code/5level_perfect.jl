@@ -93,11 +93,13 @@ end
 
 inputs = (u = u_data, z = z_data, time = time_data, z0 = 0.0001)
 
-u_star_data = vec(mean(u_star_data, dims=1))
-variance = 0.05 ^ 2 * (maximum(u_star_data) - minimum(u_star_data)) # assume 5% variance
+theta_true = (4.7, 4.7, 15.0, 9.0)
+y = G(theta_true, inputs)
 
-Γ = variance * I
-y = u_star_data
+# add 3% noise to model truth to obtain y
+Γ = 0.03^2 * I * (maximum(y) - minimum(y))
+noise_dist = MvNormal(zeros(T), Γ)
+y = y .+ rand(noise_dist)
 
 prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
 prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
@@ -106,7 +108,7 @@ prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
 N_ensemble = 5
-N_iterations = 5
+N_iterations = 20
 
 rng_seed = 41
 rng = Random.MersenneTwister(rng_seed)
@@ -156,4 +158,4 @@ println("Mean b_m:", mean(final_ensemble[3, :]))
 println("Mean b_h:", mean(final_ensemble[4, :]))
 
 println()
-generate_SHEBA_plots(plot_params, "SHEBA", false)
+generate_SHEBA_plots(plot_params, "SHEBA_perfect", false)

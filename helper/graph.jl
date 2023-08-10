@@ -16,8 +16,8 @@ function next_folder_number(folder_name, filename, cfsite, month)
     return folder_number
 end
 
-function next_SHEBA_number()
-    folders = filter(x -> startswith(x, "SHEBA_"), readdir(joinpath(@__DIR__, "../images/SHEBA")))
+function next_SHEBA_number(folder_name)
+    folders = filter(x -> startswith(x, "SHEBA_"), readdir(joinpath(@__DIR__, "../images/$(folder_name)")))
     string_length = length("SHEBA")
     folder_nums = map(x -> parse(Int64, x[string_length+2:end]), folders)
     folder_number = 1
@@ -165,16 +165,16 @@ function generate_all_plots(params, folder_name, filename, cfsite, month, new_fo
     println("Generated plots in folder: images/$(folder_name)/$(filename)_$(cfsite)_$(month)_$(folder_number)")
 end
 
-function generate_SHEBA_plots(params, new_folder = false)
+function generate_SHEBA_plots(params, folder_name, new_folder = false)
     folder_number = 0
     if (new_folder)
-        folder_number = next_SHEBA_number()
+        folder_number = next_SHEBA_number(folder_name)
     end
-    mkpath(joinpath(@__DIR__, "../images/SHEBA/SHEBA_$(folder_number)"))
+    mkpath(joinpath(@__DIR__, "../images/$(folder_name)/SHEBA_$(folder_number)"))
     
     kwargs = (;
         axes = params.ax,
-        folder_name = "SHEBA",
+        folder_name = folder_name,
         filename = ("SHEBA", ),
         folder_number = folder_number
     )
@@ -203,5 +203,5 @@ function generate_SHEBA_plots(params, new_folder = false)
     # plot final ensemble vs y 2d_histogram
     plot_histogram(params.y, params.model, final_mean, params.inputs, "ustar", "Final Ensemble", kwargs)
 
-    println("Generated plots in folder: images/SHEBA/SHEBA_$(folder_number)")
+    println("Generated plots in folder: images/$(folder_name)/SHEBA_$(folder_number)")
 end
