@@ -57,6 +57,15 @@ function plot_y_versus_model(x, y, model, theta_true, inputs, kwargs)
     png("images/$(folder_name)/$(filename_to_string(filename, folder_number))/good model and y")
 end
 
+function plot_histogram(y, model, theta_true, inputs, observable, kwargs)
+    (; axes, folder_name, filename, folder_number) = kwargs
+    truth = model(theta_true, inputs)
+    plot(truth, y, c = :green, label = "", ms = 1.5, seriestype=:scatter,)
+    xlabel!("Predicted $(observable)")
+    ylabel!("Observed $(observable)")
+    png("images/$(folder_name)/$(filename_to_string(filename, folder_number))/2d_histogram")
+end
+
 function plot_all(x, y, model, theta_true, inputs, ensembles, N_ensemble, kwargs)
     (; axes, folder_name, filename, folder_number) = kwargs
     initial_ensemble, final_ensemble = ensembles
@@ -139,6 +148,9 @@ function generate_all_plots(params, folder_name, filename, cfsite, month, new_fo
     # plot good model and y
     plot_y_versus_model(params.x, params.y, params.model, params.theta_true, params.inputs, kwargs)
 
+    # plot 2d_histogram
+    plot_histogram(params.y, params.model, params.theta_true, params.inputs, "ustar", kwargs)
+
     # plot y, good model, and ensembles
     plot_all(params.x, params.y, params.model, params.theta_true, params.inputs, params.ensembles, params.N_ensemble, kwargs)
 
@@ -168,6 +180,8 @@ function generate_SHEBA_plots(params, new_folder = false)
     # plot good model and y
     plot_y_versus_model(params.x, params.y, params.model, params.theta_true, params.inputs, kwargs)
 
+    # plot 2d_histogram
+    plot_histogram(params.y, params.model, params.theta_true, params.inputs, "ustar", kwargs)
 
     initial_ensemble, final_ensemble = params.ensembles
     # plot mean initial ensemble
@@ -177,6 +191,12 @@ function generate_SHEBA_plots(params, new_folder = false)
     # plot mean final ensemble
     final_mean = vec(mean(final_ensemble, dims=2))
     plot_final_mean(params.x, params.y, params.model, final_mean, params.inputs, kwargs)
+
+    # plot initial ensemble vs y 2d_histogram
+    plot_histogram(params.y, params.model, initial_mean, params.inputs, "ustar", kwargs)
+
+    # plot final ensemble vs y 2d_histogram
+    plot_histogram(params.y, params.model, final_mean, params.inputs, "ustar", kwargs)
 
     println("Generated plots in folder: images/SHEBA/SHEBA_$(folder_number)")
 end
