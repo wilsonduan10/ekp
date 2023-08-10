@@ -57,13 +57,18 @@ function plot_y_versus_model(x, y, model, theta_true, inputs, kwargs)
     png("images/$(folder_name)/$(filename_to_string(filename, folder_number))/good model and y")
 end
 
-function plot_histogram(y, model, theta_true, inputs, observable, kwargs)
+function plot_histogram(y, model, theta_true, inputs, observable, name, kwargs)
     (; axes, folder_name, filename, folder_number) = kwargs
     truth = model(theta_true, inputs)
     plot(truth, y, c = :green, label = "", ms = 1.5, seriestype=:scatter,)
-    xlabel!("Predicted $(observable)")
+    
+    # create dash: y = x
+    x = minimum(y):0.01:maximum(y)
+    plot!(x, x, c=:black, linestyle=:dash, linewidth=3, seriestype=:path)
+    xlabel!("$(name) Predicted $(observable)")
     ylabel!("Observed $(observable)")
-    png("images/$(folder_name)/$(filename_to_string(filename, folder_number))/2d_histogram")
+    title!("y vs $(name)")
+    png("images/$(folder_name)/$(filename_to_string(filename, folder_number))/$(name)_2d_histogram")
 end
 
 function plot_all(x, y, model, theta_true, inputs, ensembles, N_ensemble, kwargs)
@@ -149,7 +154,7 @@ function generate_all_plots(params, folder_name, filename, cfsite, month, new_fo
     plot_y_versus_model(params.x, params.y, params.model, params.theta_true, params.inputs, kwargs)
 
     # plot 2d_histogram
-    plot_histogram(params.y, params.model, params.theta_true, params.inputs, "ustar", kwargs)
+    plot_histogram(params.y, params.model, params.theta_true, params.inputs, "ustar", "Truth", kwargs)
 
     # plot y, good model, and ensembles
     plot_all(params.x, params.y, params.model, params.theta_true, params.inputs, params.ensembles, params.N_ensemble, kwargs)
@@ -181,7 +186,7 @@ function generate_SHEBA_plots(params, new_folder = false)
     plot_y_versus_model(params.x, params.y, params.model, params.theta_true, params.inputs, kwargs)
 
     # plot 2d_histogram
-    plot_histogram(params.y, params.model, params.theta_true, params.inputs, "ustar", kwargs)
+    plot_histogram(params.y, params.model, params.theta_true, params.inputs, "ustar", "Truth", kwargs)
 
     initial_ensemble, final_ensemble = params.ensembles
     # plot mean initial ensemble
@@ -193,10 +198,10 @@ function generate_SHEBA_plots(params, new_folder = false)
     plot_final_mean(params.x, params.y, params.model, final_mean, params.inputs, kwargs)
 
     # plot initial ensemble vs y 2d_histogram
-    plot_histogram(params.y, params.model, initial_mean, params.inputs, "ustar", kwargs)
+    plot_histogram(params.y, params.model, initial_mean, params.inputs, "ustar", "Initial Ensemble", kwargs)
 
     # plot final ensemble vs y 2d_histogram
-    plot_histogram(params.y, params.model, final_mean, params.inputs, "ustar", kwargs)
+    plot_histogram(params.y, params.model, final_mean, params.inputs, "ustar", "Final Ensemble", kwargs)
 
     println("Generated plots in folder: images/SHEBA/SHEBA_$(folder_number)")
 end
