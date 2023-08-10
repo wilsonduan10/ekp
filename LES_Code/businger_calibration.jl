@@ -42,7 +42,7 @@ include("../helper/graph.jl")
 # We must first download the netCDF datasets and place them into the data/ directory. We have the option to choose
 # the cfsite and the month where data is taken from, as long as the data has been downloaded.
 cfsite = 23
-month = "01"
+month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
@@ -97,7 +97,8 @@ function physical_model(parameters, inputs)
     for j in 1:T
         # Establish surface conditions
         # ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
-        ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
+        # ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
+        ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], temp_data[1, j], qt_data[1, j])
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         # u_sfc = SVector{2, FT}(u[1, j], FT(0))
         # state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
