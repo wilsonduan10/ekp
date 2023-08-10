@@ -96,8 +96,8 @@ function physical_model(parameters, inputs)
     output = zeros(Z, T)
     for j in 1:T
         # Establish surface conditions
-        ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
-        # ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
+        # ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
+        ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         # u_sfc = SVector{2, FT}(u[1, j], FT(0))
         # state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
@@ -110,8 +110,8 @@ function physical_model(parameters, inputs)
             z_in = z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             
-            ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
-            # ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
+            # ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
+            ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions
