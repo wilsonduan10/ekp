@@ -35,7 +35,7 @@ localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
 # Extract data
-max_z_index = 20
+max_z_index = 5
 spin_up = 100
 
 # profiles
@@ -78,7 +78,7 @@ y = κ * u_data / u_star_mean - log.(z_data / z0m)
 
 # Define the spatial domain and discretization 
 dim = 1
-length_scale = 20
+length_scale = 5
 pts_per_dim = LinRange(ζ_data[1], ζ_data[Z], Z)
 dofs = 30
 # smoothness = 1.0
