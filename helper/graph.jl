@@ -63,7 +63,7 @@ function plot_histogram(y, model, theta_true, inputs, observable, name, kwargs)
     plot(truth, y, c = :green, label = "", ms = 1.5, seriestype=:scatter,)
     
     # create dash: y = x
-    x = minimum(y):0.01:maximum(y)
+    x = min(minimum(y), minimum(truth)):0.0001:max(maximum(y), maximum(truth))
     plot!(x, x, c=:black, linestyle=:dash, linewidth=3, seriestype=:path)
     xlabel!("$(name) Predicted $(observable)")
     ylabel!("Observed $(observable)")
