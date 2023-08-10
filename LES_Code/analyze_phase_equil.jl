@@ -10,6 +10,7 @@ const CP = CLIMAParameters
 FT = Float64
 
 import SurfaceFluxes as SF
+import SurfaceFluxes.Parameters as SFP
 import Thermodynamics as TD
 
 # We include some helper files. The first is to set up the parameters for surface\_conditions, and
@@ -148,7 +149,7 @@ for j in 1:T
         ts_in = TD.PhaseEquil_ρTq(thermo_params, ρ_data[i], temp_data[i, j], qt_data[i, j])
         ρ = extrapolate_ρ_to_sfc(thermo_params, ts_in, surface_temp_data[j])
         # (q_sfc, ) = TD.q_vap_saturation_generic.(thermo_params, surface_temp_data[j], ρ, TD.Liquid())
-        q_sfc2 = TD.q_vap_saturation(thermo_params, surface_temp_data[j], ρ, TD.PhaseEquil)
+        q_sfc = TD.q_vap_saturation(thermo_params, surface_temp_data[j], ρ, TD.PhaseEquil)
         # q_sfc2 = TD.q_vap_saturation(thermo_params, ts_in)
         # q_sfc4 = TD.q_vap_saturation_from_pressure(thermo_params, q_tot, p, T, phase_type)
         
