@@ -83,7 +83,8 @@ function physical_model(parameters, inputs, pTq = false)
             ρ_sfc = ρ_data[1]
         end
         u_sfc = SVector{2, FT}(FT(0), FT(0))
-        state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
+        # state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
+        state_sfc = SF.SurfaceValues(z[1], u_sfc, ts_sfc)
 
         # We now loop through all heights at this time step.
         for i in 2:Z # starting at 2 because index 1 is our surface conditions
