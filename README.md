@@ -1,12 +1,16 @@
 ## Overview
-This repository is a collection of my work on EnsembleKalmanProcesses so far. 
+This repository is a collection of my work on Surface Fluxes so far. Using two datasets: LES data and SHEBA data, I perform estimation of the parameters a_m, a_h, b_m, and b_h belonging to the Businger stability functions. The parameter recovery is done with Ensemble Kalman Inversion (EKI), using the EnsembleKalmanProcesses.jl package. 
 
 ## Requirements
 In order to run the Julia files, the user must be up to date with all the relevant packages, with one exception. The user must add SurfaceFluxes#wd/businger-unstable-params to the dependencies rather than the latest version of SurfaceFluxes.
 
-In order to run most of the Julia files, the user must download LES data from this link: https://data.caltech.edu/records/a59sz-z5n11. The user may have to modify code to select a specific cfSite at a specific month. Some files require SHEBA data, which can be downloaded here: https://atmos.uw.edu/~roode/SHEBA.html. The data must be placed into the data/ folder.
+In order to run most of the Julia files, the user must download LES data from this link: https://data.caltech.edu/records/a59sz-z5n11. The user may have to modify code to select a specific cfSite at a specific month. Some files require SHEBA data, which can be downloaded here: https://data.eol.ucar.edu/dataset/13.114. The data must be placed into the data/ folder.
 
 ## Contents
+The Julia files are split into two folders: LES_Code and SHEBA_Code. Both folders contain the following files, but performed on the LES data and the SHEBA data, respectively: perfect model experiment, calibration given with ustar observable, calibration with phi observable, calibration with psi observable, and any helper files. 
+
+### LES Code
+
 ### `businger_calibration.jl`
 The file I have spent the most time with is `businger_calibration.jl`, which uses the Ensemble Kalman Inversion process from to perform parameter estimation of Businger stability functions. In this file, you can specify the cfSite and the month of data that you intend on using, and running the file automatically creates a folder in the images/ folder with the given cfSite and month in the folder name. The folder with the images is given in the form bc\_(x)\_(y)\_(z), where x is the data's cfSite, y is the data's month, and z is to differentiate between multiple runs with the same cfSite and month. The folder contains plots that help analyze the performance of the pipeline. You can see a more detailed explanation of the code in literated/businger_calibration.md, which is a literated form of the file intending to facilitate understanding of the kalman inversion pipeline. This file has some concurrent issues, see the issues section.
 
@@ -24,6 +28,8 @@ $$
 $$
 
 The right side of the equation is taken to be the observable, with values of u, u*, z, and z0m given by LES data. The model in this scenario is the Businger psi function in the SurfaceFluxes package. Once this file is run, relevant plots are generated in the images/psi folder. This file also has concurrent issues, see the issues section.
+
+### SHEBA Code
 
 ### `SHEBA_calibration.jl`
 The last high priority file is `SHEBA_calibration.jl`, which uses the same pipeline as that in `businger_calibration.jl` to tune the parameters a\_m, a\_h, b\_m, and b\_h but with SHEBA data instead of LES data. Because the data collection was imperfect, the fields u_star, latent heat flux, sensible heat flux, and surface temperature have missing values. At the timesteps where these fields are missing values, I filter out the data so that all the data we are working with is valid. Because the dataset did not explicitly provide data for the heights at which observations were drawn from, I derived the heights through the hypsometric equation. These derived heights are not accurate. This file has concurrent issues, see the issues section.
