@@ -63,6 +63,16 @@ shf_mean = mean(shf_data)
 L_MO_mean = mean(L_MO_data)
 ζ_data = z_data / L_MO_mean
 
+#=
+cv = GRF.CovarianceFunction(2, GRF.Exponential(.5))
+pts = range(0, stop=1, length=5)
+pts = [0, 1, 2, 3, 4]
+pts2 = [0, 1, 2, 4, 8]
+grf = GRF.GaussianRandomField(cv, GRF.KarhunenLoeve(30), pts, pts2)
+heatmap(grf)
+png("test_plot")
+=#
+
 # use sqrt(u^2 + v^2)
 u_data = sqrt.(u_data .* u_data .+ v_data .* v_data)
 
