@@ -147,4 +147,4 @@ plot_params = (;
     N_ensemble = N_ensemble
 )
 
-generate_SHEBA_plots(plot_params, false)
+generate_SHEBA_plots(plot_params, "SHEBA_shf", true)

@@ -167,9 +167,11 @@ end
 
 function generate_SHEBA_plots(params, folder_name, new_folder = false)
     folder_number = 0
+    mkpath(joinpath(@__DIR__, "../images/$(folder_name)"))
     if (new_folder)
         folder_number = next_SHEBA_number(folder_name)
     end
+    mkpath(joinpath(@__DIR__, "../images/$(folder_name)"))
     mkpath(joinpath(@__DIR__, "../images/$(folder_name)/SHEBA_$(folder_number)"))
     
     kwargs = (;
