@@ -31,7 +31,7 @@ max_z_index = 5
 spin_up = 100
 
 time_data = Array(data.group["timeseries"]["t"])[spin_up:end] # (865, )
-z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
+z_data = Array(data.group["reference"]["z"])[1:max_z_index] # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"])[spin_up:end] # (865, )
 u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:end] # (200, 865)
 v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, spin_up:end] # (200, 865)

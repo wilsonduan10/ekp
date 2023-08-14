@@ -18,7 +18,7 @@ month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
-z_data = Array(data.group["profiles"]["z"]) # (200, )
+z_data = Array(data.group["reference"]["z"]) # (200, )
 p_data = Array(data.group["reference"]["p0"]) # (200, ) Pa
 ρ_data = Array(data.group["reference"]["rho0"]) # (200, )
 surface_temp_data = Array(data.group["timeseries"]["surface_temperature"]) # K

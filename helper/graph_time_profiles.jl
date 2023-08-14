@@ -11,7 +11,7 @@ data = NCDataset(localfile)
 
 # Extract data
 time_data = Array(data.group["timeseries"]["t"]) # (865, )
-z_data = Array(data.group["profiles"]["z"]) # (200, )
+z_data = Array(data.group["reference"]["z"]) # (200, )
 u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"]) # (865, )
 u_data = Array(data.group["profiles"]["u_mean"]) # (200, 865)
 v_data = Array(data.group["profiles"]["v_mean"]) # (200, 865)

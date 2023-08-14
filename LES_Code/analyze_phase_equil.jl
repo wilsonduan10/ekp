@@ -40,7 +40,7 @@ qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, spin_up:end]
 temp_data = Array(data.group["profiles"]["temperature_mean"])[1:max_z_index, spin_up:end]
 
 # reference
-z_data = Array(data.group["profiles"]["z"])[1:max_z_index]
+z_data = Array(data.group["reference"]["z"])[1:max_z_index]
 ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index]
 p_data = Array(data.group["reference"]["p0"])[1:max_z_index]
 
@@ -142,7 +142,7 @@ qt_sum = 0.0
 total = 0
 
 for j in 1:T
-    for i in 2:2
+    for i in 2:5
         global ρ_sum, qt_sum, total
         # ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
         # ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])

@@ -37,7 +37,7 @@ u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:end] # (
 v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, spin_up:end] # (200, 865)
 
 # reference
-z_data = Array(data.group["profiles"]["z"])[1:max_z_index] # (200, )
+z_data = Array(data.group["reference"]["z"])[1:max_z_index] # (200, )
 
 # timeseries
 time_data = Array(data.group["timeseries"]["t"])[spin_up:end] # (865, )

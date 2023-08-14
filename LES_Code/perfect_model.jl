@@ -47,7 +47,7 @@ qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, spin_up:end]
 temp_data = Array(data.group["profiles"]["temperature_mean"])[1:max_z_index, spin_up:end]
 
 # reference
-z_data = Array(data.group["profiles"]["z"])[1:max_z_index]
+z_data = Array(data.group["reference"]["z"])[1:max_z_index]
 ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index]
 p_data = Array(data.group["reference"]["p0"])[1:max_z_index]
 
