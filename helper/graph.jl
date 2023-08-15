@@ -160,7 +160,7 @@ function generate_all_plots(params, folder_name, filename, cfsite, month, new_fo
     plot_all(params.x, params.y, params.model, params.theta_true, params.inputs, params.ensembles, params.N_ensemble, kwargs)
 
     # plot y versus model truth given different z0
-    plot_z0s(params.x, params.y, params.z0s, params.model, params.theta_true, params.most_inputs, kwargs)
+    # plot_z0s(params.x, params.y, params.z0s, params.model, params.theta_true, params.most_inputs, kwargs)
 
     println("Generated plots in folder: images/$(folder_name)/$(filename)_$(cfsite)_$(month)_$(folder_number)")
 end
