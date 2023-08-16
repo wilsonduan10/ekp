@@ -76,3 +76,39 @@ When we plot the model truth (the Businger psi equation given true parameters) v
 
 ### `SHEBA_calibration.jl`
 This file is experiencing large amounts of unconverged fluxes. This is likely due to the inaccurate derived heights.
+
+
+Equations:
+
+$$
+\frac{\partial u}{\partial z} = \frac{u_{\star}}{\kappa z}
+$$
+
+$$
+\frac{\partial \theta}{\partial z} = \frac{\theta _{\star}}{\kappa z}
+$$
+
+$$
+u(z) = \frac{u_{\star}}{\kappa}\log (\frac{z}{z_{0m}})
+$$
+
+$$
+\theta(z) - \theta _{s} = \frac{\theta _{\star}}{\kappa}\log (\frac{z}{z_{0c}})
+$$
+
+$$
+\frac{\partial u}{\partial z} = \frac{u_{\star}}{\kappa z} \phi_{m}(\zeta)
+$$
+
+$$
+\frac{\partial \theta}{\partial z} = \frac{\theta _{\star}}{\kappa z} \phi_{h}(\zeta)
+$$
+
+
+$$
+u(z) = \frac{u_{\star}}{\kappa}\Big[\log (\frac{z}{z_{0m}}) - \psi_{m}(\frac{z}{L_{mo}}) + \psi_{m}(\frac{z_{0m}}{L_{mo}}) \Big]
+$$
+
+$$
+\theta(z) - \theta _{s} = \frac{\theta _{\star}}{\kappa}\Big[\log (\frac{z}{z_{0c}}) - \psi_{h}(\frac{z}{L_{mo}}) + \psi_{h}(\frac{z_{0c}}{L_{mo}}) \Big]
+$$
