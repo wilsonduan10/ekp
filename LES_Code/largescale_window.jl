@@ -201,7 +201,7 @@ println("Mean b_h:", mean(final_ensemble[4, :]))
 
 # Generate plots
 # output_dir = joinpath(@__DIR__, "../images/LES_all")
-output_dir = "images/LES_all"
+output_dir = "images/LES_all_window"
 mkpath(output_dir)
 
 # plot mean initial ensemble and y histogram
@@ -229,7 +229,7 @@ title!("y vs Mean Final Ensemble")
 png("$(output_dir)/final_ensemble")
 
 # plot all cfsites final ensemble vs y
-output_dir = "images/LES_all/cfSites"
+output_dir = "images/LES_all_window/cfSites"
 mkpath(output_dir)
 
 reshaped_model_final = reshape(model_final, (K, S))
