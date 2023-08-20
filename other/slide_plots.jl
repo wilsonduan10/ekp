@@ -10,12 +10,14 @@ theta_sfc = 298
 u_profile = ustar / 0.4 .* log.(z ./ z0)
 theta_profile = theta_sfc .+ theta_star / 0.4 .* log.(z ./ z0)
 
-plot(u_profile, z, label="")
+plot(u_profile, z, label="", linewidth=6)
 xlabel!("u (m/s)")
 ylabel!("z (m)")
+title!("Wind Speed (u) vs Altitude (z)")
 png("u profile")
 
-plot(theta_profile, z, label="")
+plot(theta_profile, z, label="", linewidth=6)
 xlabel!("θ (K)")
 ylabel!("z (m)")
+title!("Potential Temperature (θ) vs Altitude (z)")
 png("θ profile")
