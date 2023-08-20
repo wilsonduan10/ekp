@@ -212,6 +212,7 @@ for k in 1:K
 
     plot(data.group[groupname]["t"], data.group[groupname]["friction_velocity_mean"], label="observed", seriestype=:scatter)
     plot!(data.group[groupname]["t"], ones(T) .* model_truth[k], label="predicted")
+    plot!(data.group[groupname]["t"], ones(T) .* mean(data.group[groupname]["friction_velocity_mean"]), label="mean observed")
     xlabel!("Time")
     ylabel!("ustar")
     png("$(output_dir)/$(groupname)")
