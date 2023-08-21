@@ -112,3 +112,22 @@ $$
 $$
 \theta(z) - \theta _{s} = \frac{\theta _{\star}}{\kappa}\Big[\log (\frac{z}{z_{0c}}) - \psi_{h}(\frac{z}{L_{mo}}) + \psi_{h}(\frac{z_{0c}}{L_{mo}}) \Big]
 $$
+
+$$
+\[ \phi_{m}(\zeta) = \begin{cases} 
+      a_{m}\zeta + 1 & \zeta\geq 0 \\
+      (1 - b_{m}\zeta)^{-1/4} & \zeta < 0
+   \end{cases}
+\]
+$$
+
+$$
+\[ \phi_{h}(\zeta) = \begin{cases} 
+      \frac{a_{h}\zeta}{Pr} + 1 & \zeta\geq 0 \\
+      (1 - b_{m}\zeta)^{-1/2} & \zeta < 0
+   \end{cases}
+\]
+$$
+
+$$ \theta^{n+1}m =\theta_m^n + C{\theta,G}^n(\Gamma + C^n_{G,G})^{-1}(y-G(\theta_m^n)) $$
+
