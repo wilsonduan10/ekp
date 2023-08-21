@@ -129,7 +129,7 @@ final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 # plot first 5 initial ensembles
 plot()
 for i in 1:5
-    plot!(ζ_data, constrained_initial_ensemble[:, i])
+    plot!(ζ_data, constrained_initial_ensemble[:, i], c=:red, linewidth=3)
 end
 xlabel!("ζ")
 ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
@@ -138,7 +138,7 @@ png("images/function_learning/initial_ensembles")
 # plot first 5 final ensembles
 plot()
 for i in 1:5
-    plot!(ζ_data, final_ensemble[:, i])
+    plot!(ζ_data, final_ensemble[:, i], c=:blue, linewidth=3)
 end
 xlabel!("ζ")
 ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
@@ -158,4 +158,10 @@ xlabel!("ζ")
 ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
 png("images/function_learning/y_vs_final_ensemble")
 
-println("Stored plots in images/function_learning")
+# plot for poster
+plot(ζ_data, constrained_initial_ensemble[:, 1:5], c=:red, linewidth=3, label=reshape(["Initial Ensemble", "", "", "", ""], 1, 5))
+plot!(ζ_data, final_ensemble[:, 1:5], c=:blue, linewidth=3, label=reshape(["Final Ensemble", "", "", "", ""], 1, 5))
+plot!(ζ_data, y, seriestype=:scatter, label="y", c=:green, markerstroke="green", ms=10, markershape=:utriangle)
+xlabel!("ζ")
+ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
+png("images/function_learning/poster")
