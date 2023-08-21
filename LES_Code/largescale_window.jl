@@ -240,8 +240,8 @@ for k in 1:K
     repeated = repeat(window_prediction, time_window)
     repeated_matrix = reshape(repeated, (S, time_window))
     prediction = vec(reshape(transpose(repeated_matrix), length(repeated_matrix)))[1:T]
-    plot(data.group[groupname]["t"], data.group[groupname]["friction_velocity_mean"], label="observed", seriestype=:scatter)
-    plot!(data.group[groupname]["t"], prediction, label="predicted")
+    plot(data.group[groupname]["t"], data.group[groupname]["friction_velocity_mean"], label="observed", seriestype=:scatter, c=:green, ms=3, markerstroke="green", markershape=:utriangle)
+    plot!(data.group[groupname]["t"], prediction, label="predicted", c=:blue, linewidth=3)
     xlabel!("Time")
     ylabel!("ustar")
     png("$(output_dir)/$(groupname)")

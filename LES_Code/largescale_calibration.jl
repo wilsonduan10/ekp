@@ -181,7 +181,9 @@ output_dir = "images/LES_all"
 mkpath(output_dir)
 
 theta_true = (4.7, 4.7, 15.0, 9.0)
+theta_final = mean(final_ensemble, dims=2)
 model_truth = G(theta_true)
+model_final = G(theta_final)
 
 # plot y versus the "truth" K predicted u_stars
 plot(y, label="y")
@@ -197,7 +199,7 @@ final = [G(final_ensemble[:, i]) for i in 1:N_ensemble]
 initial_label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
 final_label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
 
-plot(y, c = :green, label = "y", legend = :bottomright, seriestype=:scatter)
+plot(y, c = :green, label = "y", legend = :bottomright, ms = 3, seriestype=:scatter, markerstroke="green", markershape=:utriangle)
 plot!(initial, c = :red, label = initial_label)
 plot!(final, c = :blue, label = final_label)
 xlabel!("Location")
@@ -210,9 +212,9 @@ mkpath(output_dir)
 for k in 1:K
     groupname = NCDatasets.groupnames(data)[k]
 
-    plot(data.group[groupname]["t"], data.group[groupname]["friction_velocity_mean"], label="observed", seriestype=:scatter)
-    plot!(data.group[groupname]["t"], ones(T) .* model_truth[k], label="predicted")
-    plot!(data.group[groupname]["t"], ones(T) .* mean(data.group[groupname]["friction_velocity_mean"]), label="mean observed")
+    plot(data.group[groupname]["t"], data.group[groupname]["friction_velocity_mean"], label="observed", seriestype=:scatter, c=:green, ms=3, markerstroke="green", markershape=:utriangle)
+    plot!(data.group[groupname]["t"], ones(T) .* model_final[k], label="predicted", linewidth = 3, c=:blue)
+    plot!(data.group[groupname]["t"], ones(T) .* mean(data.group[groupname]["friction_velocity_mean"]), label="mean observed", linewidth = 3, c=:orange)
     xlabel!("Time")
     ylabel!("ustar")
     png("$(output_dir)/$(groupname)")
