@@ -163,7 +163,7 @@ generate_SHEBA_plots(plot_params, "SHEBA", false)
 # plot on same histogram
 initial = physical_model(mean(constrained_initial_ensemble, dims=2), inputs)
 final = physical_model(mean(final_ensemble, dims=2), inputs)
-plot(initial, y, c = :red, label = "Initial Ensemble", ms = 3, seriestype=:scatter, markerstroke="red", alpha = 0.8)
+plot(initial, y, c = :red, legend=:bottomright, label = "Initial Ensemble", ms = 3, seriestype=:scatter, markerstroke="red", alpha = 0.8)
 plot!(final, y, c = :blue, label = "Final Ensemble", ms = 3, seriestype=:scatter, markerstroke="blue", alpha = 0.4)
 
 minim = min(minimum(y), minimum(initial), minimum(final))
