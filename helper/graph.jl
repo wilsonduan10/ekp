@@ -48,8 +48,8 @@ end
 function plot_y_versus_model(x, y, model, theta_true, inputs, kwargs)
     (; axes, folder_name, filename, folder_number) = kwargs
     truth = model(theta_true, inputs)
-    plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter,)
-    plot!(x, truth, c = :red, label = "Model Truth", legend = :bottomright, ms = 1.5, seriestype=:scatter)
+    plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 3, seriestype=:scatter, markerstroke="green", markershape=:utriangle)
+    plot!(x, truth, c = :red, label = "Model Truth", legend = :bottomright, ms = 2, markerstrokecolor="red")
     if (!isnothing(axes))
         xlabel!(axes[1])
         ylabel!(axes[2])
@@ -79,8 +79,8 @@ function plot_all(x, y, model, theta_true, inputs, ensembles, N_ensemble, kwargs
     initial_label = reshape(vcat(["Initial ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
     final_label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)]), 1, N_ensemble)
 
-    plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 1.5, seriestype=:scatter,)
-    plot!(x, model(theta_true, inputs), c = :black, label = "Model Truth", legend = :bottomright, ms = 1.5, seriestype=:scatter)
+    plot(x, y, c = :green, label = "y", legend = :bottomright, ms = 3, seriestype=:scatter, markerstroke="green", markershape=:utriangle)
+    # plot!(x, model(theta_true, inputs), c = :black, label = "Model Truth", legend = :bottomright, ms = 1.5, seriestype=:scatter)
     plot!(x, initial, c = :red, label = initial_label)
     plot!(x, final, c = :blue, label = final_label)
     if (!isnothing(axes))
