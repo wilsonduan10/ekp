@@ -137,29 +137,10 @@ ylabel!("Pressure (Pa)")
 png("images/PhaseEquil_plots/pressure_ρTq")
 
 # analyze extrapolated surface values
-ρ_sum = 0.0
-qt_sum = 0.0
-total = 0
-
-for j in 1:T
-    for i in 2:5
-        global ρ_sum, qt_sum, total
-        # ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
-        # ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
-        ts_in = TD.PhaseEquil_ρTq(thermo_params, ρ_data[i], temp_data[i, j], qt_data[i, j])
-        ρ = extrapolate_ρ_to_sfc(thermo_params, ts_in, surface_temp_data[j])
-        q_sfc = TD.q_vap_saturation(thermo_params, surface_temp_data[j], ρ, TD.PhaseEquil)
-        
-        ρ_sum += ρ
-        qt_sum += q_sfc
-        total += 1
-    end
-end
-ρ_sum /= total
-qt_sum /= total
-
 println(ρ_data)
-println("Extrapolated surface ρ: ", ρ_sum)
-
 println(vec(mean(qt_data, dims=2)))
-println("Extrapolated surface qt: ", qt_sum)
+
+include(joinpath(@__DIR__, "../helper/setup_parameter_set.jl"))
+
+inputs = (; ρ_data, p_data, surface_temp_data, temp_data, θ_li_data, qt_data)
+ρ_temp, q_temp = extrapolate_sfc_state(inputs)

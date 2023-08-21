@@ -1,14 +1,4 @@
-#=
-In this file, we use the ensemble kalman inversion process to calibrate four parameters:
-a\_m, a\_h, b\_m, and b\_h in the Businger stability functions, where a_m and a_h are parameters
-in the stable regime, and b_m and b_h pertain to the unstable regime. We use data from Shen 2022,
-cfSite LES data with GCM forcings. We use u_star as our observable, and predict u_star using 
-the function surface_conditions from the SurfaceFluxes.jl package, which uses the Monin-Obukhov
-similarity theory to calculate important scales such as the monin-obukhov length and u_star. The 
-goal of this process is to analyze the efficacy of EKP in the context of surface fluxes. We visualize
-the success of the model through several plots.
-=#
-
+# Extrapolate surface state
 # Imports
 using LinearAlgebra, Random
 using Distributions, Plots
@@ -76,6 +66,10 @@ for i in 1:Z
     u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
 end
 
+# get surface state
+sfc_input = (; ρ_data, p_data, surface_temp_data, temp_data, θ_li_data, qt_data)
+ρ_sfc_data, qt_sfc_data = extrapolate_sfc_state(sfc_input)
+
 # Because the model sometimes fails to converge, we store unconverged values in a dictionary
 # so we can analyze and uncover the cause of failure.
 unconverged_data = Dict{Tuple{FT, FT}, Int64}()
@@ -98,23 +92,21 @@ function physical_model(parameters, inputs)
         sum = 0.0
         total = 0
         # Establish surface conditions
-        # ts_sfc = TD.PhaseEquil_ρθq(thermo_params, ρ_data[1], θ_li_data[1, j], qt_data[1, j]) # use 1 to get surface conditions
-        ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], surface_temp_data[j], qt_data[1, j])
-        # ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[1], temp_data[1, j], qt_data[1, j])
+        # ts_sfc = TD.PhaseEquil_ρTq(thermo_params, ρ_data[1], temp_data[1, j], qt_data[1, j])
+        ts_sfc = TD.PhaseEquil_ρTq(thermo_params, ρ_sfc_data, surface_temp_data[j], qt_sfc_data[j])
         u_sfc = SVector{2, FT}(FT(0), FT(0))
-        # u_sfc = SVector{2, FT}(u[1, j], FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
-        # state_sfc = SF.SurfaceValues(z[1], u_sfc, ts_sfc)
 
         # We now loop through all heights at this time step.
-        for i in 2:Z
+        for i in 1:Z
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             
-            # ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
-            ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
+            ts_in = TD.PhaseEquil_ρθq(thermo_params, ρ_data[i], θ_li_data[i, j], qt_data[i, j])
+            # ts_in = TD.PhaseEquil_pTq(thermo_params, p_data[i], temp_data[i, j], qt_data[i, j])
+            # ts_in = TD.PhaseEquil_ρTq(thermo_params, ρ_data[i], temp_data[i, j], qt_data[i, j])
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions
@@ -132,7 +124,7 @@ function physical_model(parameters, inputs)
                 sum += sf.ustar
                 total += 1
             catch e
-                # println(e)
+                println(e)
                 z_temp, t_temp = (z_data[i], time_data[j])
                 temp_key = (z_temp, t_temp)
                 haskey(unconverged_data, temp_key) ? unconverged_data[temp_key] += 1 : unconverged_data[temp_key] = 1
@@ -159,10 +151,10 @@ y = u_star_data
 
 # Define the prior parameter values which we wish to recover in our pipeline. They are constrained
 # to be non-negative due to physical laws, and their mean is given by Businger et al 1971.
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, 10)
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, 10)
-prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, 30)
-prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, 30)
+prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
+prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
+prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf)
+prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
 N_ensemble = 5
@@ -228,3 +220,13 @@ plot_params = (;
 
 println()
 generate_all_plots(plot_params, "businger_calibration", "bc", cfsite, month, false)
+
+theta_true = (4.7, 4.7, 15.0, 9.0)
+theta_bad = (4.7, 4.7, 5.0, 9.0)
+
+model_truth = G(theta_true, inputs)
+model_bad = G(theta_bad, inputs)
+
+plot(model_truth, label="Truth")
+plot!(model_bad, label="Bad")
+png("test_plot")
