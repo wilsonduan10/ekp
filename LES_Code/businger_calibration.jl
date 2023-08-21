@@ -49,7 +49,7 @@ data = NCDataset(localfile)
 # We extract the relevant data points for our pipeline.
 max_z_index = 5 # since MOST allows data only in the surface layer
 spin_up = 100
-interval = 4
+interval = 1
 
 # profiles
 u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:interval:end]
