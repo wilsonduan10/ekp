@@ -41,7 +41,7 @@ include("../helper/graph.jl")
 # We extract data from LES driven by GCM forcings, see https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2021MS002631.
 # We must first download the netCDF datasets and place them into the data/ directory. We have the option to choose
 # the cfsite and the month where data is taken from, as long as the data has been downloaded.
-cfsite = 23
+cfsite = 20
 month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
@@ -49,13 +49,14 @@ data = NCDataset(localfile)
 # We extract the relevant data points for our pipeline.
 max_z_index = 5 # since MOST allows data only in the surface layer
 spin_up = 100
+interval = 4
 
 # profiles
-u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:end]
-v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, spin_up:end]
-qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, spin_up:end]
-θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, spin_up:end]
-temp_data = Array(data.group["profiles"]["temperature_mean"])[1:max_z_index, spin_up:end]
+u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:interval:end]
+v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, spin_up:interval:end]
+qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, spin_up:interval:end]
+θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, spin_up:interval:end]
+temp_data = Array(data.group["profiles"]["temperature_mean"])[1:max_z_index, spin_up:interval:end]
 
 # reference
 z_data = Array(data.group["reference"]["z"])[1:max_z_index]
@@ -63,11 +64,11 @@ z_data = Array(data.group["reference"]["z"])[1:max_z_index]
 p_data = Array(data.group["reference"]["p0"])[1:max_z_index]
 
 # timeseries
-time_data = Array(data.group["timeseries"]["t"])[spin_up:end]
-u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"])[spin_up:end]
-lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"])[spin_up:end]
-shf_data = Array(data.group["timeseries"]["shf_surface_mean"])[spin_up:end]
-surface_temp_data = Array(data.group["timeseries"]["surface_temperature"])[spin_up:end]
+time_data = Array(data.group["timeseries"]["t"])[spin_up:interval:end]
+u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"])[spin_up:interval:end]
+lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"])[spin_up:interval:end]
+shf_data = Array(data.group["timeseries"]["shf_surface_mean"])[spin_up:interval:end]
+surface_temp_data = Array(data.group["timeseries"]["surface_temperature"])[spin_up:interval:end]
 
 Z, T = size(u_data) # extract dimensions for easier indexing
 
