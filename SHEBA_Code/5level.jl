@@ -99,14 +99,14 @@ variance = 0.05 ^ 2 * (maximum(u_star_data) - minimum(u_star_data)) # assume 5% 
 Γ = variance * I
 y = u_star_data
 
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
+prior_u1 = constrained_gaussian("a_m", 3.5, 3, 0, Inf)
+prior_u2 = constrained_gaussian("a_h", 6, 1, 0, Inf)
 prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf)
 prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
 prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
 
-N_ensemble = 5
-N_iterations = 5
+N_ensemble = 10
+N_iterations = 10
 
 rng_seed = 41
 rng = Random.MersenneTwister(rng_seed)
@@ -118,6 +118,8 @@ for n in 1:N_iterations
     params_i = get_ϕ_final(prior, ensemble_kalman_process)
     G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
+    err = get_error(ensemble_kalman_process)[end]
+    println("Iteration: " * string(n) * ", Error: " * string(err))
 end
 
 constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
@@ -157,3 +159,20 @@ println("Mean b_h:", mean(final_ensemble[4, :]))
 
 println()
 generate_SHEBA_plots(plot_params, "SHEBA", false)
+
+# plot on same histogram
+initial = physical_model(mean(constrained_initial_ensemble, dims=2), inputs)
+final = physical_model(mean(final_ensemble, dims=2), inputs)
+plot(initial, y, c = :red, label = "Initial Ensemble", ms = 3, seriestype=:scatter, markerstroke="red", alpha = 0.8)
+plot!(final, y, c = :blue, label = "Final Ensemble", ms = 3, seriestype=:scatter, markerstroke="blue", alpha = 0.4)
+
+minim = min(minimum(y), minimum(initial), minimum(final))
+maxim = max(maximum(y), maximum(initial), maximum(final))
+
+# create dash: y = x
+x = minim:0.0001:maxim
+plot!(x, x, c=:black, label = "", linestyle=:dash, linewidth=3, seriestype=:path)
+xlabel!("Predicted ustar")
+ylabel!("Observed ustar")
+title!("Ensemble Comparison")
+png("test_plot")
