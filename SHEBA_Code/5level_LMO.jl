@@ -35,10 +35,10 @@ unconverged_z = Dict{FT, Int64}()
 unconverged_t = Dict{FT, Int64}()
 
 function physical_model(parameters, inputs, info = "ValuesOnly")
-    a_m, a_h, b_m, b_h = parameters
+    a_m, a_h = parameters
     (; u, z, time, z0) = inputs
 
-    overrides = (; a_m, a_h, b_m, b_h)
+    overrides = (; a_m, a_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides)
 
     L_MOs = zeros(Z, T)
@@ -88,7 +88,7 @@ function physical_model(parameters, inputs, info = "ValuesOnly")
 end
 
 inputs = (u = u_data, z = z_data, time = time_data, z0 = 0.0001)
-theta_true = (4.7, 4.7, 15.0, 9.0)
+theta_true = (4.7, 4.7)
 model_truth = physical_model(theta_true, inputs, "ValuesOnly")
 values_only_truth = physical_model(theta_true, inputs, "ValuesOnly")
 fluxes_truth = physical_model(theta_true, inputs, "Fluxes")

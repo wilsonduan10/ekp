@@ -57,9 +57,9 @@ Z, T = size(z_data)
 
 # our model is ψ(z0m / L_MO) - ψ(z / L_MO)
 function model(parameters, inputs)
-    a_m, b_m = parameters
+    (a_m, ) = parameters
     (; z, L_MO) = inputs
-    overrides = (; a_m, b_m)
+    overrides = (; a_m)
     _, surf_flux_params = get_surf_flux_params(overrides)
 
     uft = UF.BusingerType()
@@ -92,9 +92,7 @@ y = κ * u_data ./ u_star_data - log.(z_data ./ z0m)
 y = vec(reshape(y, Z*T))
 Γ = 0.05^2 * I * (maximum(y) - minimum(y))
 
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
-prior_u2 = constrained_gaussian("b_m", 15.0, 6, 0, Inf)
-prior = combine_distributions([prior_u1, prior_u2])
+prior = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
 
 # Set up the initial ensembles
 N_ensemble = 5
@@ -123,7 +121,7 @@ ylabel!("ψ(z0m / L_MO) - ψ(z / L_MO)")
 mkpath("images/SHEBA_psi")
 png("images/SHEBA_psi/y_plot")
 
-theta_true = (4.7, 15.0)
+theta_true = (4.7, )
 model_truth = model(theta_true, inputs)
 plot(reshape(ζ_data, Z*T), model_truth)
 plot!(reshape(ζ_data, Z*T), y, seriestype=:scatter, ms=1.5)
@@ -145,12 +143,10 @@ png("images/SHEBA_psi/our_plot")
 
 println("INITIAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(constrained_initial_ensemble[1, :])) # [param, ens_no]
-println("Mean b_m:", mean(constrained_initial_ensemble[2, :]))
 println()
 
 println("FINAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
-println("Mean b_m:", mean(final_ensemble[2, :]))
 
 println("\nPlots stored in images/SHEBA_psi")
 

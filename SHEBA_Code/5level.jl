@@ -35,10 +35,10 @@ unconverged_z = Dict{FT, Int64}()
 unconverged_t = Dict{FT, Int64}()
 
 function physical_model(parameters, inputs)
-    a_m, a_h, b_m, b_h = parameters
+    a_m, a_h = parameters
     (; u, z, time, z0) = inputs
 
-    overrides = (; a_m, a_h, b_m, b_h)
+    overrides = (; a_m, a_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides)
 
     u_star = zeros(length(time))
@@ -101,9 +101,7 @@ y = u_star_data
 
 prior_u1 = constrained_gaussian("a_m", 3.5, 3, 0, Inf)
 prior_u2 = constrained_gaussian("a_h", 6, 1, 0, Inf)
-prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf)
-prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
-prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
+prior = combine_distributions([prior_u1, prior_u2])
 
 N_ensemble = 10
 N_iterations = 10
@@ -133,7 +131,7 @@ plot_params = (;
     prior = prior,
     model = physical_model,
     inputs = inputs,
-    theta_true = (4.7, 4.7, 15.0, 9.0),
+    theta_true = (4.7, 4.7),
     ensembles = (constrained_initial_ensemble, final_ensemble),
     N_ensemble = N_ensemble
 )
@@ -147,15 +145,11 @@ end
 println("INITIAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(constrained_initial_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(constrained_initial_ensemble[2, :]))
-println("Mean b_m:", mean(constrained_initial_ensemble[3, :]))
-println("Mean b_h:", mean(constrained_initial_ensemble[4, :]))
 println()
 
 println("FINAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(final_ensemble[2, :]))
-println("Mean b_m:", mean(final_ensemble[3, :]))
-println("Mean b_h:", mean(final_ensemble[4, :]))
 
 println()
 generate_SHEBA_plots(plot_params, "SHEBA", false)
