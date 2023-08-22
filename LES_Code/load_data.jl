@@ -1,0 +1,68 @@
+using LinearAlgebra, Random
+
+using Downloads
+using NCDatasets
+
+include("../helper/setup_parameter_set.jl")
+
+struct Dataset{FT}
+    u::Matrix{FT}
+    qt::Matrix{FT}
+    temperature::Matrix{FT}
+    z::Vector{FT}
+    ρ::Vector{FT}
+    p::Vector{FT}
+    time::Vector{FT}
+    u_star::Vector{FT}
+    T_sfc::Vector{FT}
+    qt_sfc::Vector{FT}
+    ρ_sfc::FT
+    fluxes::NamedTuple
+end
+
+FT = Float64
+cfsite = 20
+month = "07"
+localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
+data = NCDataset(localfile)
+
+# We extract the relevant data points for our pipeline.
+max_z_index = 5 # since MOST allows data only in the surface layer
+spin_up = 100
+
+# profiles
+u_data = Array(data.group["profiles"]["u_mean"])[1:max_z_index, spin_up:end]
+v_data = Array(data.group["profiles"]["v_mean"])[1:max_z_index, spin_up:end]
+qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, spin_up:end]
+θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, spin_up:end]
+temp_data = Array(data.group["profiles"]["temperature_mean"])[1:max_z_index, spin_up:end]
+
+# reference
+z_data = Array(data.group["reference"]["z"])[1:max_z_index]
+ρ_data = Array(data.group["reference"]["rho0"])[1:max_z_index]
+p_data = Array(data.group["reference"]["p0"])[1:max_z_index]
+
+# timeseries
+time_data = Array(data.group["timeseries"]["t"])[spin_up:end]
+u_star_data = Array(data.group["timeseries"]["friction_velocity_mean"])[spin_up:end]
+lhf_data = Array(data.group["timeseries"]["lhf_surface_mean"])[spin_up:end]
+shf_data = Array(data.group["timeseries"]["shf_surface_mean"])[spin_up:end]
+T_sfc_data = Array(data.group["timeseries"]["surface_temperature"])[spin_up:end]
+
+Z, T = size(u_data) # extract dimensions for easier indexing
+
+# We combine the u and v velocities into a single number to facilitate analysis: u = √u^2 + v^2
+for i in 1:Z
+    u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
+end
+
+# get surface state
+sfc_input = (; ρ_data, p_data, surface_temp_data = T_sfc_data, temp_data, θ_li_data, qt_data)
+ρ_sfc_data, qt_sfc_data = extrapolate_sfc_state(sfc_input)
+
+# create dataframe
+fluxes = (;)
+# fluxes = (lhf = lhf_data, shf = shf_data)
+
+filtered_data = Dataset{FT}(u_data, qt_data, temp_data, z_data, ρ_data, p_data, time_data, u_star_data, T_sfc_data, qt_sfc_data, ρ_sfc_data, fluxes)
+data = filtered_data
