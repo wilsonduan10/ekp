@@ -65,9 +65,9 @@ end
 # inputs. It establishes thermodynamic parameters and Businger parameters in order to call the 
 # function surface_conditions. We store each time step's u_star and return a list of these u_stars.
 function physical_model(parameters)
-    a_m, a_h, b_m, b_h = parameters
+    b_m, b_h = parameters
 
-    overrides = (; a_m, a_h, b_m, b_h)
+    overrides = (; b_m, b_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides) # override default Businger params
 
     output = zeros(K, S)
@@ -147,14 +147,12 @@ y = vec(reshape(y, length(y)))
 
 # Define the prior parameter values which we wish to recover in our pipeline. They are constrained
 # to be non-negative due to physical laws, and their mean is given by Businger et al 1971.
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
-prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf)
-prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
-prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
+prior_u1 = constrained_gaussian("b_m", 15.0, 8, 0, Inf)
+prior_u2 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
+prior = combine_distributions([prior_u1, prior_u2])
 
 N_ensemble = 5
-N_iterations = 15
+N_iterations = 1
 
 # Define EKP process.
 rng_seed = 41
@@ -187,17 +185,13 @@ end
 # We print the mean parameters of the initial and final ensemble to identify how
 # the parameters evolved to fit the dataset. 
 println("\nINITIAL ENSEMBLE STATISTICS")
-println("Mean a_m:", mean(constrained_initial_ensemble[1, :])) # [param, ens_no]
-println("Mean a_h:", mean(constrained_initial_ensemble[2, :]))
-println("Mean b_m:", mean(constrained_initial_ensemble[3, :]))
-println("Mean b_h:", mean(constrained_initial_ensemble[4, :]))
+println("Mean b_m:", mean(constrained_initial_ensemble[1, :]))
+println("Mean b_h:", mean(constrained_initial_ensemble[2, :]))
 println()
 
 println("FINAL ENSEMBLE STATISTICS")
-println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
-println("Mean a_h:", mean(final_ensemble[2, :]))
-println("Mean b_m:", mean(final_ensemble[3, :]))
-println("Mean b_h:", mean(final_ensemble[4, :]))
+println("Mean b_m:", mean(final_ensemble[1, :]))
+println("Mean b_h:", mean(final_ensemble[2, :]))
 
 # Generate plots
 # output_dir = joinpath(@__DIR__, "../images/LES_all")

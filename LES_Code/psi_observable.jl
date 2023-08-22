@@ -61,9 +61,9 @@ u_data = sqrt.(u_data .* u_data .+ v_data .* v_data)
 
 # our model is ψ(z0m / L_MO) - ψ(z / L_MO)
 function model(parameters, inputs)
-    a_m, a_h, b_m, b_h = parameters
+    b_m, b_h = parameters
     (; z, L_MO_mean) = inputs
-    overrides = (; a_m, a_h, b_m, b_h)
+    overrides = (; b_m, b_h)
     _, surf_flux_params = get_surf_flux_params(overrides)
 
     uft = UF.BusingerType()
@@ -93,11 +93,9 @@ y = κ * u_data / u_star_mean - log.(z_data / z0m)
 
 inputs = (; z = z_data, L_MO_mean = L_MO_mean)
 
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
-prior_u3 = constrained_gaussian("b_m", 15.0, 8, 0, Inf)
-prior_u4 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
-prior = combine_distributions([prior_u1, prior_u2, prior_u3, prior_u4])
+prior_u1 = constrained_gaussian("b_m", 15.0, 8, 0, Inf)
+prior_u2 = constrained_gaussian("b_h", 9.0, 6, 0, Inf)
+prior = combine_distributions([prior_u1, prior_u2])
 
 # Set up the initial ensembles
 N_ensemble = 5
@@ -121,21 +119,17 @@ final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
 # We print the mean parameters of the initial and final ensemble to identify how
 # the parameters evolved to fit the dataset. 
-println("INITIAL ENSEMBLE STATISTICS")
-println("Mean a_m:", mean(constrained_initial_ensemble[1, :])) # [param, ens_no]
-println("Mean a_h:", mean(constrained_initial_ensemble[2, :]))
-println("Mean b_m:", mean(constrained_initial_ensemble[3, :]))
-println("Mean b_h:", mean(constrained_initial_ensemble[4, :]))
+println("\nINITIAL ENSEMBLE STATISTICS")
+println("Mean b_m:", mean(constrained_initial_ensemble[1, :]))
+println("Mean b_h:", mean(constrained_initial_ensemble[2, :]))
 println()
 
 println("FINAL ENSEMBLE STATISTICS")
-println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
-println("Mean a_h:", mean(final_ensemble[2, :]))
-println("Mean b_m:", mean(final_ensemble[3, :]))
-println("Mean b_h:", mean(final_ensemble[4, :]))
+println("Mean b_m:", mean(final_ensemble[1, :]))
+println("Mean b_h:", mean(final_ensemble[2, :]))
 
 # plot y versus model truth
-theta_true = (4.7, 4.7, 15.0, 9.0)
+theta_true = (15.0, 9.0)
 model_truth = model(theta_true, inputs)
 plot(ζ_data, y, label="y", c=:green)
 plot!(ζ_data, model_truth, label="Model Truth", c=:black)

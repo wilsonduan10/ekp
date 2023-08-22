@@ -88,10 +88,10 @@ unconverged_t = Dict{FT, Int64}()
 # inputs. It establishes thermodynamic parameters and Businger parameters in order to call the 
 # function surface_conditions. We store each time step's u_star and return a list of these u_stars.
 function physical_model(parameters, inputs)
-    a_m, a_h, b_m, b_h = parameters
+    b_m, b_h = parameters
     (; u, z, time, lhf, shf, z0) = inputs
 
-    overrides = (; a_m, a_h, b_m, b_h)
+    overrides = (; b_m, b_h)
     thermo_params, surf_flux_params = get_surf_flux_params(overrides) # override default Businger params
 
     # Now, we loop over all the observations and call SF.surface_conditions to estimate u_star
@@ -156,7 +156,6 @@ function physical_model(parameters, inputs)
             # end
             
         end
-        println()
     end
     return output, output2, output3
 end
@@ -168,5 +167,5 @@ end
 
 inputs = (u = u_data, z = z_data, time = time_data, lhf = lhf_data, shf = shf_data, z0 = 0.0001)
 
-theta_true = (4.7, 4.7, 15.0, 9.0)
+theta_true = (15.0, 9.0)
 u, q, theta = physical_model(theta_true, inputs)
