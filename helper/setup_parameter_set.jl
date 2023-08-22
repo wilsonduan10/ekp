@@ -2,6 +2,8 @@ import CLIMAParameters as CP
 import SurfaceFluxes as SF
 import SurfaceFluxes.UniversalFunctions as UF
 import Thermodynamics as TD
+import Thermodynamics.Parameters as TP
+import SurfaceFluxes.Parameters as SFP
 
 function create_uf_parameters(toml_dict, ::UF.GryanikType)
     FT = CP.float_type(toml_dict)
