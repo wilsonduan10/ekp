@@ -81,11 +81,10 @@ function physical_model(parameters, inputs)
         ts_sfc = TD.PhaseEquil_ρTq(thermo_params, ρ_sfc_data, surface_temp_data[j], qt_sfc_data[j])
         
         u_sfc = SVector{2, FT}(FT(0), FT(0))
-        # state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
-        state_sfc = SF.SurfaceValues(z[1], u_sfc, ts_sfc)
+        state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
         # We now loop through all heights at this time step.
-        for i in 2:Z # starting at 2 because index 1 is our surface conditions
+        for i in 1:Z # starting at 2 because index 1 is our surface conditions
             u_in = u[i, j]
             v_in = FT(0)
             z_in = z[i]

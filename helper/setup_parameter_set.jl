@@ -178,6 +178,7 @@ function extrapolate_sfc_state(inputs)
     for j in 1:T
         for i in 1:Z
             q_sfc = TD.q_vap_saturation(thermo_params, surface_temp_data[j], ρ_output, TD.PhaseEquil)
+            # q_sfc = TD.q_vap_saturation_generic(thermo_params, surface_temp_data[j], ρ_output, TD.Liquid())
             
             qt_output[j] += q_sfc
         end
