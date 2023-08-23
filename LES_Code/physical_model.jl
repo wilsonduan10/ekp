@@ -31,13 +31,14 @@ get_ts_in(thermo_params, data, z, t, td_state_fn::pTq) =
     TD.PhaseEquil_pTq(thermo_params, data.p[z], data.temperature[z, t], data.qt[z, t])
 
 function physical_model(
-    parameters, 
-    data, 
+    parameters,
+    parameterTypes,
+    data,
     td_state_fn::PhaseEquilFn, 
     asc::Union{ValuesOnlyScheme, FluxesScheme, FluxesAndFrictionVelocityScheme}
 )
-    b_m, b_h = parameters
-    overrides = (; b_m, b_h)
+    @assert(length(parameterTypes) == length(parameters))
+    overrides = (; zip(parameterTypes, parameters)...)
 
     thermo_params, surf_flux_params = get_surf_flux_params(overrides) # override default Businger params
 
