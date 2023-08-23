@@ -92,8 +92,9 @@ function physical_model(parameters, inputs)
         sum = 0.0
         total = 0
         # Establish surface conditions
-        # ts_sfc = TD.PhaseEquil_ρTq(thermo_params, ρ_data[1], temp_data[1, j], qt_data[1, j])
-        ts_sfc = TD.PhaseEquil_ρTq(thermo_params, ρ_sfc_data, surface_temp_data[j], qt_sfc_data[j])
+        ts_sfc = TD.PhaseEquil_ρTq(thermo_params, ρ_sfc_data, surface_temp_data[j], qt_data[1, j])
+        # ts_sfc = TD.PhaseEquil_ρTq(thermo_params, ρ_sfc_data, surface_temp_data[j], qt_sfc_data[j])
+        
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
