@@ -15,6 +15,10 @@ abstract type PhaseEquilFn end
 struct ρTq <: PhaseEquilFn end
 struct pTq <: PhaseEquilFn end
 
+struct ValuesOnlyScheme end
+struct FluxesScheme end
+struct FluxesAndFrictionVelocityScheme end
+
 get_ts_sfc(thermo_params, data, t, td_state_fn::ρTq) = 
     TD.PhaseEquil_ρTq(thermo_params, data.ρ_sfc, data.T_sfc[t], data.qt_sfc[t])
 get_ts_sfc(thermo_params, data, t, td_state_fn::pTq) =
@@ -27,14 +31,17 @@ get_ts_in(thermo_params, data, z, t, td_state_fn::pTq) =
     TD.PhaseEquil_pTq(thermo_params, data.p[z], data.temperature[z, t], data.qt[z, t])
 
 function physical_model(
-    parameters::NamedTuple, 
+    parameters, 
     data, 
     td_state_fn::PhaseEquilFn, 
-    asc::SF.AbstractSurfaceConditions{FT} = SF.ValuesOnly{FT}
+    asc::Union{ValuesOnlyScheme, FluxesScheme, FluxesAndFrictionVelocityScheme}
 )
-    thermo_params, surf_flux_params = get_surf_flux_params(parameters) # override default Businger params
+    b_m, b_h = parameters
+    overrides = (; b_m, b_h)
 
-    Z, T = size(u)
+    thermo_params, surf_flux_params = get_surf_flux_params(overrides) # override default Businger params
+
+    Z, T = size(data.u)
     output = zeros(T)
     for j in 1:T
         sum = 0.0
@@ -56,15 +63,18 @@ function physical_model(
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions
-            z0m = z0b = z0
+            z0m = z0b = data.z0
             gustiness = FT(1)
             kwargs = (state_in = state_in, state_sfc = state_sfc, z0m = z0m, z0b = z0b, gustiness = gustiness)
-            if (asc == SF.Fluxes{FT})
+            if (typeof(asc) == ValuesOnlyScheme)
+                sc = SF.ValuesOnly{FT}(; kwargs...)
+            elseif (typeof(asc) == FluxesScheme)
                 kwargs = (; kwargs..., shf = data["shf"][j], lhf = data["lhf"][j])
-            elseif (asc == SF.FluxesAndFrictionVelocity{FT})
+                sc = SF.Fluxes{FT}(; kwargs...)
+            elseif (typeof(asc) == FluxesAndFrictionVelocityScheme)
                 kwargs = (; kwargs..., shf = data["shf"][j], lhf = data["lhf"][j], ustar = data["u_star"][j])
+                sc = SF.FluxesAndFrictionVelocity{FT}(; kwargs...)
             end
-            sc = asc(; kwargs...)
 
             # Now, we call surface_conditions and store the calculated ustar. We surround it in a try catch
             # to account for unconverged fluxes.
