@@ -1,8 +1,5 @@
 using LinearAlgebra, Random
 using Distributions, Plots
-
-using CLIMAParameters
-const CP = CLIMAParameters
 FT = Float64
 
 import RootSolvers
@@ -10,9 +7,6 @@ const RS = RootSolvers
 
 import SurfaceFluxes as SF
 import Thermodynamics as TD
-import Thermodynamics.Parameters as TP
-import SurfaceFluxes.UniversalFunctions as UF
-import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
 
 include("../helper/setup_parameter_set.jl")
@@ -22,15 +16,15 @@ struct ρTq <: PhaseEquilFn end
 struct pTq <: PhaseEquilFn end
 
 get_ts_sfc(thermo_params, data, t, td_state_fn::ρTq) = 
-    TD.PhaseEquil_ρTq(thermo_params, data["ρ_sfc"], data["T_sfc"][t], data["qt_sfc"][t])
+    TD.PhaseEquil_ρTq(thermo_params, data.ρ_sfc, data.T_sfc[t], data.qt_sfc[t])
 get_ts_sfc(thermo_params, data, t, td_state_fn::pTq) =
-    TD.PhaseEquil_pTq(thermo_params, data["p_sfc"], data["T_sfc"][t], data["qt_sfc"][t])
+    TD.PhaseEquil_pTq(thermo_params, data.p_sfc, data.T_sfc[t], data.qt_sfc[t])
 
 get_ts_in(thermo_params, data, z, t, td_state_fn::ρTq) =
-    TD.PhaseEquil_ρTq(thermo_params, data["ρ"][z], data["T"][z, t], data["qt"][z, t])
+    TD.PhaseEquil_ρTq(thermo_params, data.ρ[z], data.temperature[z, t], data.qt[z, t])
 
 get_ts_in(thermo_params, data, z, t, td_state_fn::pTq) =
-    TD.PhaseEquil_pTq(thermo_params, data["p"][z], data["T"][z, t], data["qt"][z, t])
+    TD.PhaseEquil_pTq(thermo_params, data.p[z], data.temperature[z, t], data.qt[z, t])
 
 function physical_model(
     parameters::NamedTuple, 
@@ -53,9 +47,9 @@ function physical_model(
 
         # We now loop through all heights at this time step.
         for i in 1:Z
-            u_in = data["u"][i, j]
+            u_in = data.u[i, j]
             v_in = FT(0)
-            z_in = data["z"][i]
+            z_in = data.z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             
             ts_in = get_ts_in(thermo_params, data, i, j, td_state_fn)

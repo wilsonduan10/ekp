@@ -6,7 +6,7 @@ FT = Float64
 
 include("../helper/setup_parameter_set.jl")
 
-struct Dataset{FT}
+Base.@kwdef struct Dataset{FT}
     u::Matrix{FT}
     qt::Matrix{FT}
     temperature::Matrix{FT}
@@ -18,10 +18,11 @@ struct Dataset{FT}
     T_sfc::Vector{FT}
     qt_sfc::Vector{FT}
     ρ_sfc::FT
-    fluxes::NamedTuple
+    fluxes::NamedTuple = (;)
+    z0::FT = FT(0.0001)
 end
 
-function create_dataframe(cfsite, month)
+function create_dataframe(cfsite, month, extrapolate_surface = true)
     if (month < 10)
         month = "0" * string(month)
     end
@@ -59,13 +60,16 @@ function create_dataframe(cfsite, month)
     end
 
     # get surface state
-    sfc_input = (; ρ_data, p_data, surface_temp_data = T_sfc_data, temp_data, θ_li_data, qt_data)
-    ρ_sfc_data, qt_sfc_data = extrapolate_sfc_state(sfc_input)
+    if (extrapolate_surface)
+        sfc_input = (; ρ_data, p_data, surface_temp_data = T_sfc_data, temp_data, θ_li_data, qt_data)
+        ρ_sfc_data, qt_sfc_data = extrapolate_sfc_state(sfc_input)
+    else
+        ρ_sfc_data = ρ_data[1]
+        qt_sfc_data = qt_data[1, :]
+    end
 
     # create dataframe
-    fluxes = (;)
-    # fluxes = (lhf = lhf_data, shf = shf_data)
-
-    filtered_data = Dataset{FT}(u_data, qt_data, temp_data, z_data, ρ_data, p_data, time_data, u_star_data, T_sfc_data, qt_sfc_data, ρ_sfc_data, fluxes)
+    filtered_data = Dataset{FT}(u=u_data, qt=qt_data, temperature=temp_data, z=z_data, ρ=ρ_data, p=p_data, 
+                                time=time_data, u_star=u_star_data, T_sfc=T_sfc_data, qt_sfc=qt_sfc_data, ρ_sfc = ρ_sfc_data)
     return filtered_data
 end
