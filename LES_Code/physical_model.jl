@@ -19,15 +19,15 @@ struct ValuesOnlyScheme end
 struct FluxesScheme end
 struct FluxesAndFrictionVelocityScheme end
 
-get_ts_sfc(thermo_params, data, t, td_state_fn::ρTq) = 
+get_ts_sfc(thermo_params, data, t, ::ρTq) = 
     TD.PhaseEquil_ρTq(thermo_params, data.ρ_sfc, data.T_sfc[t], data.qt_sfc[t])
-get_ts_sfc(thermo_params, data, t, td_state_fn::pTq) =
+get_ts_sfc(thermo_params, data, t, ::pTq) =
     TD.PhaseEquil_pTq(thermo_params, data.p_sfc, data.T_sfc[t], data.qt_sfc[t])
 
-get_ts_in(thermo_params, data, z, t, td_state_fn::ρTq) =
+get_ts_in(thermo_params, data, z, t, ::ρTq) =
     TD.PhaseEquil_ρTq(thermo_params, data.ρ[z], data.temperature[z, t], data.qt[z, t])
 
-get_ts_in(thermo_params, data, z, t, td_state_fn::pTq) =
+get_ts_in(thermo_params, data, z, t, ::pTq) =
     TD.PhaseEquil_pTq(thermo_params, data.p[z], data.temperature[z, t], data.qt[z, t])
 
 function physical_model(
@@ -40,7 +40,8 @@ function physical_model(
     @assert(length(parameterTypes) == length(parameters))
     overrides = (; zip(parameterTypes, parameters)...)
 
-    thermo_params, surf_flux_params = get_surf_flux_params(overrides) # override default Businger params
+    toml_dict = CP.create_toml_dict(FT; dict_type = "alias")
+    surf_flux_params = create_parameters(toml_dict, UF.BusingerType(), overrides)
 
     Z, T = size(data.u)
     output = zeros(T)
@@ -49,7 +50,7 @@ function physical_model(
         total = 0
 
         # Establish surface conditions
-        ts_sfc = get_ts_sfc(thermo_params, data, j, td_state_fn)
+        ts_sfc = get_ts_sfc(surf_flux_params.thermo_params, data, j, td_state_fn)
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
 
@@ -60,7 +61,7 @@ function physical_model(
             z_in = data.z[i]
             u_in = SVector{2, FT}(u_in, v_in)
             
-            ts_in = get_ts_in(thermo_params, data, i, j, td_state_fn)
+            ts_in = get_ts_in(surf_flux_params.thermo_params, data, i, j, td_state_fn)
             state_in = SF.InteriorValues(z_in, u_in, ts_in)
 
             # We provide a few additional parameters for SF.surface_conditions

@@ -5,7 +5,7 @@ import Thermodynamics as TD
 import Thermodynamics.Parameters as TP
 import SurfaceFluxes.Parameters as SFP
 
-function create_uf_parameters(toml_dict, ::UF.GryanikType)
+function create_uf_parameters(toml_dict, overrides, ::UF.GryanikType)
     FT = CP.float_type(toml_dict)
 
     aliases = ["Pr_0_Gryanik", "a_m_Gryanik", "a_h_Gryanik", "b_m_Gryanik", "b_h_Gryanik", "ζ_a_Gryanik", "γ_Gryanik"]
@@ -22,10 +22,12 @@ function create_uf_parameters(toml_dict, ::UF.GryanikType)
         ζ_a = pairs.ζ_a_Gryanik,
         γ = pairs.γ_Gryanik,
     )
+    pairs = override_climaatmos_defaults(pairs, overrides)
+
     return UF.GryanikParams{FT}(; pairs...)
 end
 
-function create_uf_parameters(toml_dict, ::UF.BusingerType)
+function create_uf_parameters(toml_dict, overrides, ::UF.BusingerType)
     FT = CP.float_type(toml_dict)
     aliases =
         ["Pr_0_Businger", "a_m_Businger", "a_h_Businger", "b_m_Businger", "b_h_Businger", "ζ_a_Businger", "γ_Businger"]
@@ -42,10 +44,12 @@ function create_uf_parameters(toml_dict, ::UF.BusingerType)
         ζ_a = pairs.ζ_a_Businger,
         γ = pairs.γ_Businger,
     )
+    pairs = override_climaatmos_defaults(pairs, overrides)
+
     return UF.BusingerParams{FT}(; pairs...)
 end
 
-function create_uf_parameters(toml_dict, ::UF.GrachevType)
+function create_uf_parameters(toml_dict, overrides, ::UF.GrachevType)
     FT = CP.float_type(toml_dict)
     aliases = [
         "Pr_0_Grachev",
@@ -71,13 +75,15 @@ function create_uf_parameters(toml_dict, ::UF.GrachevType)
         ζ_a = pairs.ζ_a_Grachev,
         γ = pairs.γ_Grachev,
     )
+    pairs = override_climaatmos_defaults(pairs, overrides)
+
     return UF.GrachevParams{FT}(; pairs...)
 end
 
-function create_parameters(toml_dict, ufpt)
+function create_parameters(toml_dict, ufpt, overrides = (;))
     FT = CP.float_type(toml_dict)
 
-    ufp = create_uf_parameters(toml_dict, ufpt)
+    ufp = create_uf_parameters(toml_dict, overrides, ufpt)
     AUFP = typeof(ufp)
 
     aliases = string.(fieldnames(TD.Parameters.ThermodynamicsParameters))
