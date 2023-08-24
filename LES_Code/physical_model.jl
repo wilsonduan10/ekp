@@ -34,6 +34,7 @@ function physical_model(
     parameters,
     parameterTypes,
     data,
+    ufpt::UF.AbstractUniversalFunctionType,
     td_state_fn::PhaseEquilFn, 
     asc::Union{ValuesOnlyScheme, FluxesScheme, FluxesAndFrictionVelocityScheme}
 )
@@ -41,7 +42,7 @@ function physical_model(
     overrides = (; zip(parameterTypes, parameters)...)
 
     toml_dict = CP.create_toml_dict(FT; dict_type = "alias")
-    surf_flux_params = create_parameters(toml_dict, UF.BusingerType(), overrides)
+    surf_flux_params = create_parameters(toml_dict, ufpt, overrides)
 
     Z, T = size(data.u)
     output = zeros(T)

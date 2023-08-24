@@ -37,6 +37,7 @@ include("physical_model.jl")
 cfSite = 23
 month = 7
 parameterTypes = (:b_m, :b_h)
+ufpt = UF.BusingerType()
 phase_fn = ρTq()
 scheme = ValuesOnlyScheme()
 outputdir = "images/businger_calibration/bc_$(cfSite)_$(month)_0"
@@ -46,7 +47,7 @@ data = create_dataframe(cfSite, month)
 
 # Our function G simply returns the output of the physical model.
 function G(parameters)
-    return physical_model(parameters, parameterTypes, data, phase_fn, scheme)
+    return physical_model(parameters, parameterTypes, data, ufpt, phase_fn, scheme)
 end
 
 y = data.u_star
