@@ -26,7 +26,6 @@ get_ts_sfc(thermo_params, data, t, ::pTq) =
 
 get_ts_in(thermo_params, data, z, t, ::ρTq) =
     TD.PhaseEquil_ρTq(thermo_params, data.ρ[z], data.temperature[z, t], data.qt[z, t])
-
 get_ts_in(thermo_params, data, z, t, ::pTq) =
     TD.PhaseEquil_pTq(thermo_params, data.p[z], data.temperature[z, t], data.qt[z, t])
 
@@ -35,6 +34,8 @@ function physical_model(
     parameterTypes,
     data,
     ufpt::UF.AbstractUniversalFunctionType,
+    observable_fn,
+    H_map,
     td_state_fn::PhaseEquilFn, 
     asc::Union{ValuesOnlyScheme, FluxesScheme, FluxesAndFrictionVelocityScheme}
 )
@@ -45,11 +46,8 @@ function physical_model(
     surf_flux_params = create_parameters(toml_dict, ufpt, overrides)
 
     Z, T = size(data.u)
-    output = zeros(T)
+    output = zeros(Z, T)
     for j in 1:T
-        sum = 0.0
-        total = 0
-
         # Establish surface conditions
         ts_sfc = get_ts_sfc(surf_flux_params.thermo_params, data, j, td_state_fn)
         u_sfc = SVector{2, FT}(FT(0), FT(0))
@@ -83,13 +81,11 @@ function physical_model(
             # to account for unconverged fluxes.
             try
                 sf = SF.surface_conditions(surf_flux_params, sc, soltype = RS.VerboseSolution())
-                sum += sf.ustar
-                total += 1
+                output[i, j] = observable_fn(sf)
             catch e
                 println(e)
             end
         end
-        output[j] = sum / total
     end
-    return output
+    return H_map(output)
 end

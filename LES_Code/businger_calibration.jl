@@ -40,6 +40,9 @@ parameterTypes = (:b_m, :b_h)
 ufpt = UF.BusingerType()
 phase_fn = ρTq()
 scheme = ValuesOnlyScheme()
+get_observable(sf) = sf.ustar
+H(output) = vec(mean(output, dims=1)) # H is height averaging
+
 outputdir = "images/businger_calibration/bc_$(cfSite)_$(month)_0"
 mkpath(outputdir)
 
@@ -47,7 +50,7 @@ data = create_dataframe(cfSite, month)
 
 # Our function G simply returns the output of the physical model.
 function G(parameters)
-    return physical_model(parameters, parameterTypes, data, ufpt, phase_fn, scheme)
+    return physical_model(parameters, parameterTypes, data, ufpt, get_observable, H, phase_fn, scheme)
 end
 
 y = data.u_star
