@@ -22,6 +22,10 @@ Base.@kwdef struct Dataset{FT}
     z0::FT = FT(0.0001)
 end
 
+abstract type PhaseEquilFn end
+struct ρTq <: PhaseEquilFn end
+struct pTq <: PhaseEquilFn end
+
 function create_dataframe(cfsite, month, extrapolate_surface = true)
     if (month < 10)
         month = "0" * string(month)
@@ -61,8 +65,8 @@ function create_dataframe(cfsite, month, extrapolate_surface = true)
 
     # get surface state
     if (extrapolate_surface)
-        sfc_input = (; ρ_data, p_data, surface_temp_data = T_sfc_data, temp_data, θ_li_data, qt_data)
-        ρ_sfc_data, qt_sfc_data = extrapolate_sfc_state(sfc_input)
+        sfc_input = (; ρ_data, p_data, surface_temp_data = T_sfc_data, temp_data, qt_data)
+        ρ_sfc_data, qt_sfc_data = extrapolate_sfc_state(sfc_input, ρTq())
     else
         ρ_sfc_data = ρ_data[1]
         qt_sfc_data = qt_data[1, :]
