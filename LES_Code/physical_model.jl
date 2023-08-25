@@ -33,11 +33,11 @@ function physical_model(
     parameters,
     parameterTypes,
     data,
-    ufpt::UF.AbstractUniversalFunctionType,
     observable_fn,
     H_map,
-    td_state_fn::PhaseEquilFn, 
-    asc::Union{ValuesOnlyScheme, FluxesScheme, FluxesAndFrictionVelocityScheme}
+    ufpt::UF.AbstractUniversalFunctionType = UF.BusingerType(),
+    td_state_fn::PhaseEquilFn = ρTq(), 
+    asc::Union{ValuesOnlyScheme, FluxesScheme, FluxesAndFrictionVelocityScheme} = ValuesOnlyScheme()
 )
     @assert(length(parameterTypes) == length(parameters))
     overrides = (; zip(parameterTypes, parameters)...)

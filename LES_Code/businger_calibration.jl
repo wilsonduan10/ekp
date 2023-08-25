@@ -50,7 +50,7 @@ data = create_dataframe(cfSite, month)
 
 # Our function G simply returns the output of the physical model.
 function G(parameters)
-    return physical_model(parameters, parameterTypes, data, ufpt, get_observable, H, phase_fn, scheme)
+    return physical_model(parameters, parameterTypes, data, get_observable, H, ufpt, phase_fn, scheme)
 end
 
 y = data.u_star
