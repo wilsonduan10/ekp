@@ -103,7 +103,7 @@ plot(model_truth, label="Model Truth", c=:red, seriestype=:scatter, ms=5)
 plot!(y, label="y", c=:green, seriestype=:scatter, ms=5)
 xlabel!("T")
 ylabel!("ustar")
-png("$(outputdir)/test_plot")
+png("$(outputdir)/model_truth")
 
 initial = [G(constrained_initial_ensemble[:, i]) for i in 1:N_ensemble]
 final = [G(final_ensemble[:, i]) for i in 1:N_ensemble]
@@ -115,4 +115,4 @@ plot!(data.time, initial, c = :red, label = initial_label, linewidth = 2)
 plot!(data.time, final, c = :blue, label = final_label, linewidth = 2)
 xlabel!("T")
 ylabel!("ustar")
-png("$(outputdir)/test_plot2")
+png("$(outputdir)/ensembles")
