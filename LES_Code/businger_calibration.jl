@@ -48,7 +48,6 @@ parameterTypes = (:b_m, :b_h)
 ufpt = UF.BusingerType()
 phase_fn = ρTq()
 scheme = ValuesOnlyScheme()
-y = data.u_star
 function H(output)
     observable = zeros(T)
     for j in 1:T
@@ -64,6 +63,9 @@ function H(output)
     end
     return observable
 end
+
+# define observable y
+y = data.u_star
 
 # Our function G simply returns the output of the physical model.
 function G(parameters)
