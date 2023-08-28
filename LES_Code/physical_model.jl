@@ -33,7 +33,6 @@ function physical_model(
     parameters,
     parameterTypes,
     data,
-    observable_fn,
     H_map,
     ufpt::UF.AbstractUniversalFunctionType = UF.BusingerType(),
     td_state_fn::PhaseEquilFn = ρTq(), 
@@ -46,7 +45,7 @@ function physical_model(
     surf_flux_params = create_parameters(toml_dict, ufpt, overrides)
 
     Z, T = size(data.u)
-    output = zeros(Z, T)
+    output = Array{Union{SF.SurfaceFluxConditions, Nothing}}(undef, Z, T)
     for j in 1:T
         # Establish surface conditions
         ts_sfc = get_ts_sfc(surf_flux_params.thermo_params, data, j, td_state_fn)
@@ -81,8 +80,9 @@ function physical_model(
             # to account for unconverged fluxes.
             try
                 sf = SF.surface_conditions(surf_flux_params, sc, soltype = RS.VerboseSolution())
-                output[i, j] = observable_fn(sf)
+                output[i, j] = sf
             catch e
+                output[i, j] = nothing
                 println(e)
             end
         end
