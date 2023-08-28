@@ -50,9 +50,9 @@ mkpath(outputdir)
 data = create_dataframe(cfSite, month)
 Z, T = size(data.u)
 
-# Our function G simply returns the output of the physical model.
 function G(parameters)
-    return physical_model(parameters, parameterTypes, data, H, ufpt, phase_fn, scheme)
+    Ψ = physical_model(parameters, parameterTypes, data, ufpt, phase_fn, scheme)
+    return H(Ψ)
 end
 
 theta_true = (15.0, 9.0)
