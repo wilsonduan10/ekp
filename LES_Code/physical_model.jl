@@ -74,7 +74,7 @@ function physical_model(
                 sc = SF.FluxesAndFrictionVelocity{FT}(; kwargs...)
             end
 
-            # Now, we call surface_conditions and store the calculated ustar. We surround it in a try catch
+            # Now, we call surface_conditions and store the calculated surface conditions. We surround it in a try catch
             # to account for unconverged fluxes.
             try
                 sf = SF.surface_conditions(surf_flux_params, sc, soltype = RS.VerboseSolution())

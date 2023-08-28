@@ -65,6 +65,7 @@ function H(output)
 end
 
 # define observable y
+observable_name = "ustar"
 y = data.u_star
 
 # Our function G simply returns the output of the physical model.
@@ -120,7 +121,7 @@ model_truth = G(theta_true)
 plot(model_truth, label="Model Truth", c=:red, seriestype=:scatter, ms=5)
 plot!(y, label="y", c=:green, seriestype=:scatter, ms=5)
 xlabel!("T")
-ylabel!("ustar")
+ylabel!("$(observable_name)")
 png("$(outputdir)/model_truth")
 
 initial = [G(constrained_initial_ensemble[:, i]) for i in 1:N_ensemble]
@@ -132,5 +133,5 @@ plot(data.time, y, c = :green, label = "y", legend = :bottomright, ms = 5, serie
 plot!(data.time, initial, c = :red, label = initial_label, linewidth = 2)
 plot!(data.time, final, c = :blue, label = final_label, linewidth = 2)
 xlabel!("T")
-ylabel!("ustar")
+ylabel!("$(observable_name)")
 png("$(outputdir)/ensembles")
