@@ -33,13 +33,22 @@ include("../helper/graph.jl")
 include("load_data.jl")
 include("physical_model.jl")
 
-# constants
+# get data
 cfSite = 23
 month = 7
+
+data = create_dataframe(cfSite, month)
+Z, T = size(data.u)
+
+outputdir = "images/businger_calibration/bc_$(cfSite)_$(month)_0"
+mkpath(outputdir)
+
+# other model parameters
 parameterTypes = (:b_m, :b_h)
 ufpt = UF.BusingerType()
 phase_fn = ρTq()
 scheme = ValuesOnlyScheme()
+y = data.u_star
 function H(output)
     observable = zeros(T)
     for j in 1:T
@@ -56,18 +65,11 @@ function H(output)
     return observable
 end
 
-outputdir = "images/businger_calibration/bc_$(cfSite)_$(month)_0"
-mkpath(outputdir)
-
-data = create_dataframe(cfSite, month)
-Z, T = size(data.u)
-
 # Our function G simply returns the output of the physical model.
 function G(parameters)
     return physical_model(parameters, parameterTypes, data, H, ufpt, phase_fn, scheme)
 end
 
-y = data.u_star
 variance = 0.05^2 * (maximum(y) - minimum(y)) # assume 5% noise
 Γ = variance * I
 
