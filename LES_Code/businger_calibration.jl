@@ -60,6 +60,7 @@ outputdir = "images/businger_calibration/bc_$(cfSite)_$(month)_0"
 mkpath(outputdir)
 
 data = create_dataframe(cfSite, month)
+Z, T = size(data.u)
 
 # Our function G simply returns the output of the physical model.
 function G(parameters)

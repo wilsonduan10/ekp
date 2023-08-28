@@ -19,10 +19,8 @@ struct ValuesOnlyScheme end
 struct FluxesScheme end
 struct FluxesAndFrictionVelocityScheme end
 
-get_ts_sfc(thermo_params, data, t, ::ρTq) = 
+get_ts_sfc(thermo_params, data, t, ::Union{ρTq, pTq}) = 
     TD.PhaseEquil_ρTq(thermo_params, data.ρ_sfc, data.T_sfc[t], data.qt_sfc[t])
-get_ts_sfc(thermo_params, data, t, ::pTq) =
-    TD.PhaseEquil_pTq(thermo_params, data.p_sfc, data.T_sfc[t], data.qt_sfc[t])
 
 get_ts_in(thermo_params, data, z, t, ::ρTq) =
     TD.PhaseEquil_ρTq(thermo_params, data.ρ[z], data.temperature[z, t], data.qt[z, t])
@@ -69,10 +67,10 @@ function physical_model(
             if (typeof(asc) == ValuesOnlyScheme)
                 sc = SF.ValuesOnly{FT}(; kwargs...)
             elseif (typeof(asc) == FluxesScheme)
-                kwargs = (; kwargs..., shf = data["shf"][j], lhf = data["lhf"][j])
+                kwargs = (; kwargs..., shf = data.shf[j], lhf = data.lhf[j])
                 sc = SF.Fluxes{FT}(; kwargs...)
             elseif (typeof(asc) == FluxesAndFrictionVelocityScheme)
-                kwargs = (; kwargs..., shf = data["shf"][j], lhf = data["lhf"][j], ustar = data["u_star"][j])
+                kwargs = (; kwargs..., shf = data.shf[j], lhf = data.lhf[j], ustar = data.u_star[j])
                 sc = SF.FluxesAndFrictionVelocity{FT}(; kwargs...)
             end
 
