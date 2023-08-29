@@ -18,7 +18,6 @@ import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
 
 include("../helper/setup_parameter_set.jl")
-include("../helper/graph.jl")
 include("load_data.jl")
 include("physical_model.jl")
 
@@ -39,13 +38,8 @@ ufpt = UF.BusingerType()
 phase_fn = ρTq()
 scheme = ValuesOnlyScheme()
 
-function H(output)
-    return vec(reshape(output, length(output)))
-end
-
-function H_inverse(output)
-    return reshape(output, 3, Z, T)
-end
+H(output) = vec(reshape(output, length(output)))
+H_inverse(output) = reshape(output, 3, Z, T)
 
 function G(parameters)
     Ψ = physical_model_profiles(parameters, parameterTypes, data, ufpt, phase_fn, scheme)
