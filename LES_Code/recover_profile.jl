@@ -116,14 +116,14 @@ final_label = reshape(vcat(["Final ensemble"], ["" for i in 1:(N_ensemble - 1)])
 ## plot u
 function plot_u(z_level)
     # plot model_truth
-    plot(data.u[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y")
+    plot(data.u[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y", markerstrokewidth=0)
     plot!(u_truth[z_level, :], c=:red, seriestype=:scatter, ms=5, label="Model Truth")
     xlabel!("T")
     ylabel!("Wind speed (u)")
     png("$(outputdir)/u_model_truth")
 
     # plot ensembles
-    plot(data.u[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y")
+    plot(data.u[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y", markerstrokewidth=0)
     for i in 1:N_ensemble
         plot!(initial[i][1, z_level, :], c=:red, label="", linewidth=2)
     end
@@ -139,14 +139,14 @@ plot_u(1)
 ## plot qt
 function plot_qt(z_level)
     # plot model_truth
-    plot(data.qt[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y")
+    plot(data.qt[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y", markerstrokewidth=0)
     plot!(qt_truth[z_level, :], c=:red, seriestype=:scatter, ms=5, label="Model Truth")
     xlabel!("T")
     ylabel!("Total specific humidity (qt)")
     png("$(outputdir)/qt_model_truth")
 
     # plot ensembles
-    plot(data.qt[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y")
+    plot(data.qt[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y", markerstrokewidth=0)
     for i in 1:N_ensemble
         plot!(initial[i][2, z_level, :], c=:red, label="", linewidth=2)
     end
@@ -162,14 +162,14 @@ plot_qt(1)
 ## plot θ
 function plot_theta(z_level)
     # plot model_truth
-    plot(data.θ[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y")
+    plot(data.θ[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y", markerstrokewidth=0)
     plot!(θ_truth[z_level, :], c=:red, seriestype=:scatter, ms=5, label="Model Truth")
     xlabel!("T")
     ylabel!("Potential temperature (θ)")
     png("$(outputdir)/θ_model_truth")
 
     # plot ensembles
-    plot(data.θ[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y")
+    plot(data.θ[z_level, :], c=:green, seriestype=:scatter, ms=5, label="y", markerstrokewidth=0)
     for i in 1:N_ensemble
         plot!(initial[i][3, z_level, :], c=:red, label="", linewidth=2)
     end
