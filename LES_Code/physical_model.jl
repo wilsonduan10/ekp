@@ -145,12 +145,12 @@ function physical_model_profiles(
                 
                 # recover q
                 X_sfc = data.qt_sfc[j]
-                X_star = SF.compute_physical_scale_coeff(surf_flux_params, sc, sf.L_MO, UF.HeatTransport(), ufpt, SF.FDScheme())
-                output2[2, i, j] = SF.recover_profile(surf_flux_params, sc, sf.L_MO, z_in, X_sfc, X_star, UF.HeatTransport(), ufpt, solverScheme)
+                X_star = SF.compute_physical_scale_coeff(surf_flux_params, sc, sf.L_MO, UF.HeatTransport(), ufpt, solverScheme)
+                output[2, i, j] = SF.recover_profile(surf_flux_params, sc, sf.L_MO, z_in, X_sfc, X_star, UF.HeatTransport(), ufpt, solverScheme)
 
                 # recover theta
                 X_sfc = data.T_sfc[j]
-                output3[3, i, j] = SF.recover_profile(surf_flux_params, sc, sf.L_MO, z_in, X_sfc, X_star, UF.HeatTransport(), ufpt, solverScheme)
+                output[3, i, j] = SF.recover_profile(surf_flux_params, sc, sf.L_MO, z_in, X_sfc, X_star, UF.HeatTransport(), ufpt, solverScheme)
             catch e
                 println(e)
             end

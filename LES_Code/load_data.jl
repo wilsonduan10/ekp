@@ -20,6 +20,7 @@ Base.@kwdef struct Dataset{FT}
     ρ_sfc::FT
     shf::Vector{FT} = Vector{FT}()
     lhf::Vector{FT} = Vector{FT}()
+    θ::Matrix{FT} = zeros(0, 0)
     z0::FT = FT(0.0001)
 end
 
@@ -44,6 +45,7 @@ function create_dataframe(cfsite, month, extrapolate_surface = true)
     qt_data = Array(data.group["profiles"]["qt_mean"])[1:max_z_index, spin_up:end]
     θ_li_data = Array(data.group["profiles"]["thetali_mean"])[1:max_z_index, spin_up:end]
     temp_data = Array(data.group["profiles"]["temperature_mean"])[1:max_z_index, spin_up:end]
+    θ_data = Array(data.group["profiles"]["theta_mean"])[1:max_z_index, spin_up:end]
 
     # reference
     z_data = Array(data.group["reference"]["z"])[1:max_z_index]
@@ -76,6 +78,6 @@ function create_dataframe(cfsite, month, extrapolate_surface = true)
     # create dataframe
     filtered_data = Dataset{FT}(u=u_data, qt=qt_data, temperature=temp_data, z=z_data, ρ=ρ_data, p=p_data, 
                                 time=time_data, u_star=u_star_data, T_sfc=T_sfc_data, qt_sfc=qt_sfc_data, 
-                                ρ_sfc = ρ_sfc_data, shf=shf_data, lhf=lhf_data)
+                                ρ_sfc = ρ_sfc_data, shf=shf_data, lhf=lhf_data, θ=θ_data)
     return filtered_data
 end
