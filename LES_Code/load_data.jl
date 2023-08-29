@@ -22,6 +22,7 @@ Base.@kwdef struct Dataset{FT}
     lhf::Vector{FT} = Vector{FT}()
     θ::Matrix{FT} = zeros(0, 0)
     buoy_flux::Vector{FT} = Vector{FT}()
+    L_MO::Vector{FT} = Vector{FT}()
     z0::FT = FT(0.0001)
 end
 
@@ -60,6 +61,7 @@ function create_dataframe(cfsite, month, extrapolate_surface = true)
     shf_data = Array(data.group["timeseries"]["shf_surface_mean"])[spin_up:end]
     T_sfc_data = Array(data.group["timeseries"]["surface_temperature"])[spin_up:end]
     buoy_flux_data = Array(data.group["timeseries"]["buoyancy_flux_surface_mean"])[spin_up:end]
+    LMO_data = Array(data.group["timeseries"]["obukhov_length_mean"])[spin_up:end]
 
     Z, T = size(u_data) # extract dimensions for easier indexing
 
@@ -80,6 +82,6 @@ function create_dataframe(cfsite, month, extrapolate_surface = true)
     # create dataframe
     filtered_data = Dataset{FT}(u=u_data, qt=qt_data, temperature=temp_data, z=z_data, ρ=ρ_data, p=p_data, 
                                 time=time_data, u_star=u_star_data, T_sfc=T_sfc_data, qt_sfc=qt_sfc_data, 
-                                ρ_sfc = ρ_sfc_data, shf=shf_data, lhf=lhf_data, θ=θ_data, buoy_flux=buoy_flux_data)
+                                ρ_sfc = ρ_sfc_data, shf=shf_data, lhf=lhf_data, θ=θ_data, buoy_flux=buoy_flux_data, L_MO=LMO_data)
     return filtered_data
 end
