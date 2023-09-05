@@ -70,6 +70,7 @@ function G(parameters)
     return H(Ψ)
 end
 
+ENV["GKSwstype"] = "nul"
 theta_true = (15.0, 9.0)
 ustar_truth, shf_truth, lhf_truth, buoy_flux_truth, LMO_truth = G(theta_true)
 

@@ -13,14 +13,9 @@ import SurfaceFluxes as SF
 import SurfaceFluxes.Parameters as SFP
 import Thermodynamics as TD
 
-# We include some helper files. The first is to set up the parameters for surface\_conditions, and
-# the second is to plot our results.
 include("../helper/setup_parameter_set.jl")
-include("../helper/graph.jl")
+ENV["GKSwstype"] = "nul"
 
-# We extract data from LES driven by GCM forcings, see https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2021MS002631.
-# We must first download the netCDF datasets and place them into the data/ directory. We have the option to choose
-# the cfsite and the month where data is taken from, as long as the data has been downloaded.
 cfsite = 23
 month = "01"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
@@ -56,18 +51,6 @@ Z, T = size(u_data) # extract dimensions for easier indexing
 # We combine the u and v velocities into a single number to facilitate analysis: u = √u^2 + v^2
 for i in 1:Z
     u_data[i, :] = sqrt.(u_data[i, :] .* u_data[i, :] .+ v_data[i, :] .* v_data[i, :])
-end
-
-"""
-    extrapolate_ρ_to_sfc(thermo_params, ts_int, T_sfc)
-
-Uses the ideal gas law and hydrostatic balance to extrapolate for surface density.
-"""
-function extrapolate_ρ_to_sfc(thermo_params, ts_in, T_sfc)
-    T_int = TD.air_temperature(thermo_params, ts_in)
-    Rm_int = TD.gas_constant_air(thermo_params, ts_in)
-    ρ_air = TD.air_density(thermo_params, ts_in)
-    ρ_air * (T_sfc / T_int)^(TD.cv_m(thermo_params, ts_in) / Rm_int)
 end
 
 thermo_params, _ = get_surf_flux_params((;))
@@ -119,7 +102,7 @@ xlabel!("Z")
 ylabel!("Air density (kg/m^3)")
 png("images/PhaseEquil_plots/rho_pTq")
 
-# check D.PhaseEquil_ρTq
+# check TD.PhaseEquil_ρTq
 p_alt = zeros(Z, T)
 for j in 1:T
     for i in 1:Z
@@ -135,12 +118,3 @@ title!("Pressure Comparison with ρTq")
 xlabel!("Z")
 ylabel!("Pressure (Pa)")
 png("images/PhaseEquil_plots/pressure_ρTq")
-
-# analyze extrapolated surface values
-println(ρ_data)
-println(vec(mean(qt_data, dims=2)))
-
-include(joinpath(@__DIR__, "../helper/setup_parameter_set.jl"))
-
-inputs = (; ρ_data, p_data, surface_temp_data, temp_data, θ_li_data, qt_data)
-ρ_temp, q_temp = extrapolate_sfc_state(inputs)
