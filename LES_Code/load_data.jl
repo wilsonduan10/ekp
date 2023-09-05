@@ -31,7 +31,7 @@ struct ρTq <: PhaseEquilFn end
 struct pTq <: PhaseEquilFn end
 
 function create_dataframe(cfsite, month, extrapolate_surface = true)
-    if (month < 10)
+    if (month isa Number && month < 10)
         month = "0" * string(month)
     end
     localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
