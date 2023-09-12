@@ -17,6 +17,8 @@ import Thermodynamics.Parameters as TP
 import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
+
+ENV["GKSwstype"] = "nul"
 include("../helper/setup_parameter_set.jl")
 
 mkpath(joinpath(@__DIR__, "../images"))
@@ -91,7 +93,6 @@ end
 inputs = (; z = z_data, L_MO = L_MO_data)
 
 # plot to evaluate if calibration will be possible
-ENV["GKSwstype"] = "nul"
 theta_true = (4.7, 4.7, 15.0, 9.0)
 model_truth = model(theta_true, inputs)
 ζ_range = z_data / mean(L_MO_data)

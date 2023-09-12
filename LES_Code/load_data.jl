@@ -82,6 +82,7 @@ function create_dataframe(cfsite, month, extrapolate_surface = true)
     # create dataframe
     filtered_data = Dataset{FT}(u=u_data, qt=qt_data, temperature=temp_data, z=z_data, ρ=ρ_data, p=p_data, 
                                 time=time_data, u_star=u_star_data, T_sfc=T_sfc_data, qt_sfc=qt_sfc_data, 
-                                ρ_sfc = ρ_sfc_data, shf=shf_data, lhf=lhf_data, θ=θ_data, buoy_flux=buoy_flux_data, L_MO=LMO_data)
+                                ρ_sfc = ρ_sfc_data, shf=shf_data, lhf=lhf_data, θ=θ_data, buoy_flux=buoy_flux_data, 
+                                L_MO=LMO_data)
     return filtered_data
 end

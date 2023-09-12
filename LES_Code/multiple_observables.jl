@@ -17,6 +17,7 @@ import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
 
+ENV["GKSwstype"] = "nul"
 include("../helper/setup_parameter_set.jl")
 include("load_data.jl")
 include("physical_model.jl")
@@ -121,7 +122,6 @@ println("Mean b_m:", mean(final_ensemble[1, :]))
 println("Mean b_h:", mean(final_ensemble[2, :]))
 
 # plot model truth
-ENV["GKSwstype"] = "nul"
 theta_true = (15.0, 9.0)
 model_truth = unflatten(G(theta_true))
 y = unflatten(y)

@@ -17,6 +17,7 @@ import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
 
+ENV["GKSwstype"] = "nul"
 include("../helper/setup_parameter_set.jl")
 include("load_data.jl")
 include("physical_model.jl")
@@ -29,6 +30,11 @@ data = create_dataframe(cfSite, month)
 Z, T = size(data.u)
 
 outputdir = "images/businger_calibration/bc_$(cfSite)_$(month)_0"
+for i in 1:length(outputdir)
+    if (outputdir[i] == '/')
+        mkpath(outputdir[1:i-1])
+    end
+end
 mkpath(outputdir)
 
 # other model parameters
@@ -104,7 +110,6 @@ println("FINAL ENSEMBLE STATISTICS")
 println("Mean b_m:", mean(final_ensemble[1, :]))
 println("Mean b_h:", mean(final_ensemble[2, :]))
 
-ENV["GKSwstype"] = "nul"
 theta_true = (15.0, 9.0)
 model_truth = G(theta_true)
 plot(model_truth, label="Model Truth", c=:red, seriestype=:scatter, ms=5)

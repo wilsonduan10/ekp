@@ -22,6 +22,7 @@ import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
 
+ENV["GKSwstype"] = "nul"
 include("../helper/setup_parameter_set.jl")
 include("load_data.jl")
 

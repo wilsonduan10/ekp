@@ -17,6 +17,7 @@ import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
 
+ENV["GKSwstype"] = "nul"
 include("../helper/setup_parameter_set.jl")
 include("load_data.jl")
 include("physical_model.jl")
@@ -70,7 +71,6 @@ function G(parameters)
     return H(Ψ)
 end
 
-ENV["GKSwstype"] = "nul"
 theta_true = (15.0, 9.0)
 ustar_truth, shf_truth, lhf_truth, buoy_flux_truth, LMO_truth = G(theta_true)
 

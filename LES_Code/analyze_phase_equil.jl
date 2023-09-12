@@ -14,7 +14,6 @@ import SurfaceFluxes.Parameters as SFP
 import Thermodynamics as TD
 
 include("../helper/setup_parameter_set.jl")
-ENV["GKSwstype"] = "nul"
 
 cfsite = 23
 month = "01"
@@ -70,6 +69,7 @@ p_alt = vec(mean(p_alt, dims=2))
 T_alt = vec(mean(T_alt, dims=2))
 T_data = vec(mean(temp_data, dims=2))
 
+ENV["GKSwstype"] = "nul"
 plot(z_data, p_data, label="data")
 plot!(z_data, p_alt, label="estimate")
 title!("Pressure Comparison with ρθq")

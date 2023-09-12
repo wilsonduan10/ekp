@@ -19,9 +19,8 @@ import SurfaceFluxes.UniversalFunctions as UF
 import SurfaceFluxes.Parameters as SFP
 using StaticArrays: SVector
 
-include("../helper/setup_parameter_set.jl")
-
 ENV["GKSwstype"] = "nul"
+include("../helper/setup_parameter_set.jl")
 
 cfsite = 23
 month = "07"
