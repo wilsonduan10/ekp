@@ -45,7 +45,14 @@ function H(output)
     end
     return observable
 end
+
+
 outputdir = "images/LES_perfect_model/pm_$(cfSite)_$(month)_0"
+for i in 1:length(outputdir)
+    if (outputdir[i] == '/')
+        mkpath(outputdir[1:i-1])
+    end
+end
 mkpath(outputdir)
 
 data = create_dataframe(cfSite, month)

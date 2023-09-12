@@ -128,6 +128,7 @@ println("Mean b_h:", mean(final_ensemble[2, :]))
 # Generate plots
 # outputdir = joinpath(@__DIR__, "../images/LES_all")
 outputdir = "images/LES_all"
+mkpath("images")
 mkpath(outputdir)
 
 theta_true = (15.0, 9.0)

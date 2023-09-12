@@ -30,6 +30,11 @@ data = create_dataframe(cfSite, month)
 Z, T = size(data.u)
 
 outputdir = "images/LES_observables/observables_$(cfSite)_$(month)"
+for i in 1:length(outputdir)
+    if (outputdir[i] == '/')
+        mkpath(outputdir[1:i-1])
+    end
+end
 mkpath(outputdir)
 
 # other model parameters

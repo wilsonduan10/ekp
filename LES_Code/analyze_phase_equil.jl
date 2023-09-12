@@ -20,6 +20,7 @@ month = "01"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
 data = NCDataset(localfile)
 
+mkpath("images")
 mkpath("images/PhaseEquil_plots")
 
 # We extract the relevant data points for our pipeline.

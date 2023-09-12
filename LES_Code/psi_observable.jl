@@ -21,11 +21,13 @@ using StaticArrays: SVector
 
 ENV["GKSwstype"] = "nul"
 include("../helper/setup_parameter_set.jl")
+mkpath("images")
+mkpath("images/LES_psi")
 
 cfsite = 23
 month = "07"
 localfile = "data/Stats.cfsite$(cfsite)_CNRM-CM5_amip_2004-2008.$(month).nc"
-data = NCDataset(localfile);
+data = NCDataset(localfile)
 
 # Extract data
 max_z_index = 20

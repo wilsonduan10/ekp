@@ -30,7 +30,11 @@ data = create_dataframe(cfSite, month)
 Z, T = size(data.u)
 
 outputdir = "images/recover_profile/rp_$(cfSite)_$(month)_0"
-mkpath("images/recover_profile")
+for i in 1:length(outputdir)
+    if (outputdir[i] == '/')
+        mkpath(outputdir[1:i-1])
+    end
+end
 mkpath(outputdir)
 
 # other model parameters

@@ -149,6 +149,7 @@ println("Mean b_h:", mean(final_ensemble[2, :]))
 
 # Generate plots
 output_dir = "images/LES_all_window"
+mkpath("images")
 mkpath(output_dir)
 
 # plot mean initial ensemble and y histogram
