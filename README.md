@@ -7,7 +7,7 @@ In order to run the Julia files, the user must be up to date with all the releva
 In order to run most of the Julia files, the user must download LES data from this link: https://data.caltech.edu/records/a59sz-z5n11. The user may have to modify code to select a specific cfSite at a specific month. Some files require SHEBA data, which can be downloaded here: https://data.eol.ucar.edu/dataset/13.114. The data must be placed into the data/ folder.
 
 ## Contents
-The Julia files are split into two folders: LES_Code and SHEBA_Code. Both folders contain the following files, but performed on the LES data and the SHEBA data, respectively: perfect model experiment, calibration given with ustar observable, calibration with phi observable, calibration with psi observable, and any helper files. 
+The Julia files are split into two folders: LES_Code and SHEBA_Code. See the README files in the respective folders for more information. 
 
 ### LES Code
 
