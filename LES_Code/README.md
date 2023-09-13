@@ -1,6 +1,9 @@
 ## Overview
 This folder includes all the calibration files that pertain to the use of EKI with LES data, which can be found here: https://data.caltech.edu/records/a59sz-z5n11. The data is split into different cfSites and months, marking the location of the data collected and the month it was collected at, respectively. The LES data consists of data mostly belonging to the unstable surface layer, hence we calibrate only b_m and b_h of the Businger function parameters.
 
+![](../assets/LESdata.png)
+
+
 ## How to run
 The files must be run as follows:
 - First, make sure you are in the root of the repository in the terminal.
