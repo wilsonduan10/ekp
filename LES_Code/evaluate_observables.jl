@@ -80,7 +80,7 @@ theta_true = (15.0, 9.0)
 ustar_truth, shf_truth, lhf_truth, buoy_flux_truth, LMO_truth = G(theta_true)
 
 # plot ustar
-plot(data.u_star, c=:green, seriestype=:scatter, ms=5, label="data")
+plot(data.u_star, c=:green, seriestype=:scatter, ms=5, label="data", markershape=:utriangle)
 plot!(ustar_truth, c=:red, seriestype=:scatter, ms=5, label="predicted")
 title!("ustar comparison")
 xlabel!("T")
@@ -88,7 +88,7 @@ ylabel!("ustar")
 png("$(outputdir)/ustar_plot")
 
 # plot shf
-plot(data.shf, c=:green, seriestype=:scatter, ms=5, label="data")
+plot(data.shf, c=:green, seriestype=:scatter, ms=5, label="data", markershape=:utriangle)
 plot!(shf_truth, c=:red, seriestype=:scatter, ms=5, label="predicted")
 title!("shf comparison")
 xlabel!("T")
@@ -96,7 +96,7 @@ ylabel!("shf")
 png("$(outputdir)/shf_plot")
 
 # plot lhf
-plot(data.lhf, c=:green, seriestype=:scatter, ms=5, label="data")
+plot(data.lhf, c=:green, seriestype=:scatter, ms=5, label="data", markershape=:utriangle)
 plot!(lhf_truth, c=:red, seriestype=:scatter, ms=5, label="predicted")
 title!("lhf comparison")
 xlabel!("T")
@@ -104,7 +104,7 @@ ylabel!("lhf")
 png("$(outputdir)/lhf_plot")
 
 # buoy flux
-plot(data.buoy_flux, c=:green, seriestype=:scatter, ms=5, label="data")
+plot(data.buoy_flux, c=:green, seriestype=:scatter, ms=5, label="data", markershape=:utriangle)
 plot!(buoy_flux_truth, c=:red, seriestype=:scatter, ms=5, label="predicted")
 title!("buoy_flux comparison")
 xlabel!("T")
@@ -112,7 +112,7 @@ ylabel!("buoy_flux")
 png("$(outputdir)/buoy_flux_plot")
 
 # LMO
-plot(data.L_MO, c=:green, seriestype=:scatter, ms=5, label="data")
+plot(data.L_MO, c=:green, seriestype=:scatter, ms=5, label="data", markershape=:utriangle)
 plot!(LMO_truth, c=:red, seriestype=:scatter, ms=5, label="predicted")
 title!("LMO comparison")
 xlabel!("T")
