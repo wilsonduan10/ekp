@@ -126,3 +126,6 @@ $$
 
 $$ \theta^{n+1}m =\theta_m^n + C{\theta,G}^n(\Gamma + C^n_{G,G})^{-1}(y-G(\theta_m^n)) $$
 
+$$
+ - \psi_{m}(\frac{z}{L_{mo}}) + \psi_{m}(\frac{z_{0m}}{L_{mo}}) = \frac{\kappa u(z)}{u_{\star}} - \log (\frac{z}{z_{0m}})
+$$

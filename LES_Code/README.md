@@ -3,13 +3,12 @@ This folder includes all the calibration files that pertain to the use of EKI wi
 
 ![](../assets/LESdata.png)
 
-
 ## How to run
 The files must be run as follows:
 - First, make sure you are in the root of the repository in the terminal.
 - Second, run the command: julia --project
 - Third, instantiate all dependencies.
-- Lastly, type the line: include("LES_Code/<<FILENAME HERE>>")
+- Lastly, type the line: include("LES_Code/<`filename`>")
 
 ## Contents
 The core files of this folder are `load_data.jl` and `physical_model.jl` – `load_data.jl` loads in the cfSite data, and `physical_model.jl` represents the surface flux model. Aside from that, there exist files that use different observables to perform calibration, as well as files for data analysis and sensitivity analysis. 
@@ -26,6 +25,8 @@ This file defines a dataset struct that holds all of the data relevant for calib
     - these surface conditions are to be fed into some H map to result in observables
 
 ### `businger_calibration.jl`
-- explain
+- explain what the file does when it is run
+    - calibration + images output to folder
+- 
 
 ### `perfect_model.jl`
