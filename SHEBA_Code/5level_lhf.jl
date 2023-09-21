@@ -43,13 +43,14 @@ function physical_model(parameters, inputs)
     surf_flux_params = create_parameters(toml_dict, ufpt, overrides)
     thermo_params = surf_flux_params.thermo_params
 
-    u_star = zeros(length(time))
+    output = zeros(T)
     for j in 1:T # 865
-        u_star_sum = 0.0
-        total = 0
         ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[j], T_sfc_data[j], q_data[1, j]) # use 1 to get surface conditions
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
+
+        sum = 0.0
+        total = 0
 
         for i in 2:Z
             u_in = u[i, j]
@@ -67,10 +68,11 @@ function physical_model(parameters, inputs)
 
             try
                 sf = SF.surface_conditions(surf_flux_params, sc)
-                if (sf.ustar < 1.0)
-                    u_star_sum += sf.ustar
+                if (sf.lhf > -100 && sf.lhf < 100)
+                    sum += sf.lhf
                     total += 1
                 end
+                
             catch e
                 # println(e)
 
@@ -83,29 +85,27 @@ function physical_model(parameters, inputs)
             
         end
 
-        u_star[j] = u_star_sum / max(total, 1)
+        output[j] = sum / max(1, total)
+
     end
-    return u_star
+    return output
 end
 
 function G(parameters, inputs)
-    u_star = physical_model(parameters, inputs)
-    return u_star
+    output = physical_model(parameters, inputs)
+    return output
 end
 
 inputs = (u = u_data, z = z_data, time = time_data, z0 = 0.0001)
-
-u_star_data = vec(mean(u_star_data, dims=1))
-variance = 0.05 ^ 2 * (maximum(u_star_data) - minimum(u_star_data)) # assume 5% variance
-
+y = lhf_data
+variance = 0.05 ^ 2 * (maximum(y) - minimum(y)) # assume 5% variance
 Γ = variance * I
-y = u_star_data
 
-prior_u1 = constrained_gaussian("a_m", 3.5, 3, 0, Inf)
-prior_u2 = constrained_gaussian("a_h", 6, 1, 0, Inf)
+prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, 200)
+prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, 200)
 prior = combine_distributions([prior_u1, prior_u2])
 
-N_ensemble = 10
+N_ensemble = 5
 N_iterations = 10
 
 rng_seed = 41
@@ -118,25 +118,13 @@ for n in 1:N_iterations
     params_i = get_ϕ_final(prior, ensemble_kalman_process)
     G_ens = hcat([G(params_i[:, m], inputs) for m in 1:N_ensemble]...)
     EKP.update_ensemble!(ensemble_kalman_process, G_ens)
-    err = get_error(ensemble_kalman_process)[end]
+    err = get_error(ensemble_kalman_process)[end] #mean((params_true - mean(params_i,dims=2)).^2)
     println("Iteration: " * string(n) * ", Error: " * string(err))
 end
 
 constrained_initial_ensemble = get_ϕ(prior, ensemble_kalman_process, 1)
 final_ensemble = get_ϕ_final(prior, ensemble_kalman_process)
 
-plot_params = (;
-    x = time_data,
-    y = y,
-    observable = u_star_data,
-    ax = ("T", "U*"),
-    prior = prior,
-    model = physical_model,
-    inputs = inputs,
-    theta_true = (4.7, 4.7),
-    ensembles = (constrained_initial_ensemble, final_ensemble),
-    N_ensemble = N_ensemble
-)
 if (length(unconverged_data) > 0)
     println("Unconverged data points: ", unconverged_data)
     println("Unconverged z: ", unconverged_z)
@@ -153,8 +141,20 @@ println("FINAL ENSEMBLE STATISTICS")
 println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(final_ensemble[2, :]))
 
-println()
-generate_SHEBA_plots(plot_params, "SHEBA", false)
+plot_params = (;
+    x = time_data,
+    y = y,
+    observable = shf_data[1, :],
+    ax = ("T", "shf"),
+    prior = prior,
+    model = physical_model,
+    inputs = inputs,
+    theta_true = (4.7, 4.7),
+    ensembles = (constrained_initial_ensemble, final_ensemble),
+    N_ensemble = N_ensemble
+)
+
+# generate_SHEBA_plots(plot_params, "SHEBA_shf", true)
 
 # plot on same histogram
 initial = physical_model(mean(constrained_initial_ensemble, dims=2), inputs)
@@ -164,11 +164,10 @@ plot!(final, y, c = :blue, label = "Final Ensemble", ms = 3, seriestype=:scatter
 
 minim = min(minimum(y), minimum(initial), minimum(final))
 maxim = max(maximum(y), maximum(initial), maximum(final))
-
 # create dash: y = x
 x = minim:0.0001:maxim
 plot!(x, x, c=:black, label = "", linestyle=:dash, linewidth=3, seriestype=:path)
-xlabel!("Predicted ustar")
-ylabel!("Observed ustar")
+xlabel!("Predicted lhf")
+ylabel!("Observed lhf")
 title!("Ensemble Comparison")
-png("test_plot")
+png("test_plot4")

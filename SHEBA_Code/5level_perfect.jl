@@ -39,7 +39,9 @@ function physical_model(parameters, inputs)
     (; u, z, time, z0) = inputs
 
     overrides = (; a_m, a_h)
-    thermo_params, surf_flux_params = get_surf_flux_params(overrides)
+    toml_dict = CP.create_toml_dict(FT; dict_type = "alias")
+    surf_flux_params = create_parameters(toml_dict, ufpt, overrides)
+    thermo_params = surf_flux_params.thermo_params
 
     u_star = zeros(length(time))
     for j in 1:T # 865
@@ -101,8 +103,8 @@ y = G(theta_true, inputs)
 noise_dist = MvNormal(zeros(T), Γ)
 y = y .+ rand(noise_dist)
 
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, Inf)
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, Inf)
+prior_u1 = constrained_gaussian("a_m", 3.5, 3, 0, Inf)
+prior_u2 = constrained_gaussian("a_h", 6, 1, 0, Inf)
 prior = combine_distributions([prior_u1, prior_u2])
 
 N_ensemble = 5
@@ -154,4 +156,23 @@ println("Mean a_m:", mean(final_ensemble[1, :])) # [param, ens_no]
 println("Mean a_h:", mean(final_ensemble[2, :]))
 
 println()
-generate_SHEBA_plots(plot_params, "SHEBA_perfect", false)
+# generate_SHEBA_plots(plot_params, "SHEBA_perfect", false)
+
+# plot on same histogram
+# test = (10.0, 10.0)
+# initial = physical_model(test, inputs)
+initial = physical_model(mean(constrained_initial_ensemble, dims=2), inputs)
+final = physical_model(mean(final_ensemble, dims=2), inputs)
+plot(initial, y, c = :red, legend=:bottomright, label = "Initial Ensemble", ms = 3, seriestype=:scatter, markerstroke="red", alpha = 0.8)
+plot!(final, y, c = :blue, label = "Final Ensemble", ms = 3, seriestype=:scatter, markerstroke="blue", alpha = 0.4)
+
+minim = min(minimum(y), minimum(initial), minimum(final))
+maxim = max(maximum(y), maximum(initial), maximum(final))
+
+# create dash: y = x
+x = minim:0.0001:maxim
+plot!(x, x, c=:black, label = "", linestyle=:dash, linewidth=3, seriestype=:path)
+xlabel!("Predicted ustar")
+ylabel!("Observed ustar")
+title!("Ensemble Comparison")
+png("test_plot3")

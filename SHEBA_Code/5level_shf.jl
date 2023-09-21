@@ -39,13 +39,18 @@ function physical_model(parameters, inputs)
     (; u, z, time, z0) = inputs
 
     overrides = (; a_m, a_h)
-    thermo_params, surf_flux_params = get_surf_flux_params(overrides)
+    toml_dict = CP.create_toml_dict(FT; dict_type = "alias")
+    surf_flux_params = create_parameters(toml_dict, ufpt, overrides)
+    thermo_params = surf_flux_params.thermo_params
 
-    output = zeros(Z, T)
+    output = zeros(T)
     for j in 1:T # 865
         ts_sfc = TD.PhaseEquil_pTq(thermo_params, p_data[j], T_sfc_data[j], q_data[1, j]) # use 1 to get surface conditions
         u_sfc = SVector{2, FT}(FT(0), FT(0))
         state_sfc = SF.SurfaceValues(FT(0), u_sfc, ts_sfc)
+
+        sum = 0.0
+        total = 0
 
         for i in 2:Z
             u_in = u[i, j]
@@ -63,7 +68,11 @@ function physical_model(parameters, inputs)
 
             try
                 sf = SF.surface_conditions(surf_flux_params, sc)
-                output[i, j] = sf.shf
+                if (sf.shf > -100 && sf.shf < 100)
+                    sum += sf.shf
+                    total += 1
+                end
+                
             catch e
                 # println(e)
 
@@ -76,8 +85,10 @@ function physical_model(parameters, inputs)
             
         end
 
+        output[j] = sum / max(1, total)
+
     end
-    return vec(mean(output, dims=1))
+    return output
 end
 
 function G(parameters, inputs)
@@ -90,8 +101,8 @@ y = shf_data[1, :]
 variance = 0.05 ^ 2 * (maximum(y) - minimum(y)) # assume 5% variance
 Γ = variance * I
 
-prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, 10)
-prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, 10)
+prior_u1 = constrained_gaussian("a_m", 4.7, 3, 0, 20)
+prior_u2 = constrained_gaussian("a_h", 4.7, 3, 0, 20)
 prior = combine_distributions([prior_u1, prior_u2])
 
 N_ensemble = 5
@@ -143,4 +154,20 @@ plot_params = (;
     N_ensemble = N_ensemble
 )
 
-generate_SHEBA_plots(plot_params, "SHEBA_shf", true)
+# generate_SHEBA_plots(plot_params, "SHEBA_shf", true)
+
+# plot on same histogram
+initial = physical_model(mean(constrained_initial_ensemble, dims=2), inputs)
+final = physical_model(mean(final_ensemble, dims=2), inputs)
+plot(initial, y, c = :red, legend=:bottomright, label = "Initial Ensemble", ms = 3, seriestype=:scatter, markerstroke="red", alpha = 0.8)
+plot!(final, y, c = :blue, label = "Final Ensemble", ms = 3, seriestype=:scatter, markerstroke="blue", alpha = 0.4)
+
+minim = min(minimum(y), minimum(initial), minimum(final))
+maxim = max(maximum(y), maximum(initial), maximum(final))
+# create dash: y = x
+x = minim:0.0001:maxim
+plot!(x, x, c=:black, label = "", linestyle=:dash, linewidth=3, seriestype=:path)
+xlabel!("Predicted shf")
+ylabel!("Observed shf")
+title!("Ensemble Comparison")
+png("test_plot2")

@@ -38,7 +38,7 @@ end
 for i in 1:T
     if (999.0 in z_data[:, i] || 9999.0 in u_star_data[:, i] || 9999.0 in ws_data[:, i] || 
         9999.0 in wd_data[:, i] || 9999.0 in q_data[:, i] || 9999.0 in shf_data[:, i] || 
-        9999.0 in T_data[:, i] || 9999.0 in T_sfc_data[i])
+        9999.0 in T_data[:, i] || 9999.0 in T_sfc_data[i] || lhf_data[i] == 999.0)
         mask[i] = true
     end
 end
