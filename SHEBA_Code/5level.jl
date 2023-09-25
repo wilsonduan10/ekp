@@ -101,8 +101,8 @@ variance = 0.05 ^ 2 * (maximum(u_star_data) - minimum(u_star_data)) # assume 5% 
 Γ = variance * I
 y = u_star_data
 
-prior_u1 = constrained_gaussian("a_m", 3.5, 3, 0, Inf)
-prior_u2 = constrained_gaussian("a_h", 6, 1, 0, Inf)
+prior_u1 = constrained_gaussian("a_m", 15, 7, 0, Inf)
+prior_u2 = constrained_gaussian("a_h", 6, 5, 0, Inf)
 prior = combine_distributions([prior_u1, prior_u2])
 
 N_ensemble = 10

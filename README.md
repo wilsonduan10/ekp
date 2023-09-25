@@ -34,15 +34,6 @@ The right side of the equation is taken to be the observable, with values of u, 
 ### `SHEBA_calibration.jl`
 The last high priority file is `SHEBA_calibration.jl`, which uses the same pipeline as that in `businger_calibration.jl` to tune the parameters a\_m, a\_h, b\_m, and b\_h but with SHEBA data instead of LES data. Because the data collection was imperfect, the fields u_star, latent heat flux, sensible heat flux, and surface temperature have missing values. At the timesteps where these fields are missing values, I filter out the data so that all the data we are working with is valid. Because the dataset did not explicitly provide data for the heights at which observations were drawn from, I derived the heights through the hypsometric equation. These derived heights are not accurate. This file has concurrent issues, see the issues section.
 
-### `plot_LMO.jl`
-There also exists a file, `plot_LMO.jl`. This file plots the L_MO calculated through surface conditions given LES data versus the L_MO provided by the dataset. It generates 4 plots, all of which display the calculated L_MO versus the data's L_MO, but differ in implementation slightly.
-1. Uses TD.PhaseEquil_ρθq to set thermodynamic state, and uses Fluxes to reach L_MO convergence. The plot is stored as fluxes_1.png.
-2. Uses TD.PhaseEquil_ρθq to set thermodynamic state, and uses ValuesOnly to reach L_MO convergence. The plot is stored as values_only_1.png.
-3. Uses TD.PhaseEquil_pTq to set thermodynamic state, and uses Fluxes to reach L_MO convergence. The plot is stored as fluxes_2.png.
-4. Uses TD.PhaseEquil_pTq to set thermodynamic state, and uses ValuesOnly to reach L_MO convergence. The plot is stored as values_only_2.png.
-
-The plots are generated in the folder images/L_MO_images.
-
 ### Helper files
 In the helper/ folder, there exist a few graphing files: `graph_time_profiles.jl`, `graph_SHEBA_profiles.jl`, and `graph.jl`. `graph.jl` is responsible for creating the specialized folders in the images folder and populating them with the plots relevant to `businger_calibration.jl`. `graph_time_profiles.jl` plots a few LES profiles in respect to time. `graph_SHEBA_profiles` does a similar job but with SHEBA data, and this file serves to identify where data is missing (i.e. has values of 9999.0). This folder also contains `setup_parameter_set.jl`, which is used by all the calibration files in order to fetch thermodynamic parameters and Businger parameters from the CLIMAParameters package. It also contains functionality such that Julia files can override the default Businger parameters with variables that are meant to be calibrated, such as a\_m and a\_h. 
 
