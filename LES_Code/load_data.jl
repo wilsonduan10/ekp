@@ -6,7 +6,7 @@ FT = Float64
 
 include("../helper/setup_parameter_set.jl")
 
-Base.@kwdef struct Dataset{FT}
+Base.@kwdef mutable struct Dataset{FT}
     u::Matrix{FT}
     qt::Matrix{FT}
     temperature::Matrix{FT}
