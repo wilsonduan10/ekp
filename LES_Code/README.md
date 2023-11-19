@@ -54,6 +54,9 @@ This file uses a collection of all downloaded cfSite and month data to perform c
 ### `largescale_window.jl`
 This file also uses all downloaded cfSites and months, but instead of calibrating with the ustar averaged over all timesteps, ustar is averaged in 6 hour windows just like `window_average.jl`. The plots are generated in the folder images/LES_all_window.
 
+### `largescale_transformation.jl`
+This file is the same as `largescale_window.jl`, but it multiplies the output of the model by a weight and an offset to correct it. This weight and offset is calibrated by EKI in addition to b\_m and b\_h. The images are generated in the folder images/LES_window_transformation.
+
 ### `psi_observable.jl`
 This file compares the model truth of the psi correction term to that given by the LES data. See the equation:
 
